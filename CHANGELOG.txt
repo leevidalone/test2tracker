@@ -1,0 +1,207 @@
+AION 2 CHARACTER TRACKER - CHANGELOG
+====================================
+All data is stored only in each person's own browser (localStorage).
+Updating the site never resets anyone's saved characters.
+
+
+2026-10-19 (newest 11)
+----------------------
+- Pages sidebar on the left: Character Tracker (the existing page) and a new
+  Pet Tracker page. The page you were on is remembered.
+- Pet Tracker: list of 200 pets with Elyos / Asmodian / Abyss tick or cross,
+  a "View location" link, genus type and notes. Tick the box on the left to
+  hide a pet you have; Find box and genus filter; "Show hidden pets" /
+  "Hide ticked pets again" button. Ticks are saved in your browser.
+- With the membership switch off, the Energy cap shows 560 instead of 840
+  (characters on the standard cap only).
+
+
+2026-10-18 (newest 10)
+----------------------
+- Membership icon now has a transparent background (cleaner on both light and
+  dark mode) and is a little larger.
+
+
+2026-10-18 (newest 9)
+---------------------
+- Membership switch (with the membership icon) in the Show on page card. When
+  off, Odyle Shop Purchases are hidden on every character and left out of
+  Estimated Income and the Kina cost. On by default; remembered in your
+  browser.
+- Small info (i) icons: Est. Kina (counts current energy, plus morphs and shop
+  purchases left; not energy that recharges later) and Shop Purchases
+  (membership required, sold by the Windbreeze Merchants).
+
+
+2026-10-18 (newest 8)
+---------------------
+- Divider lines between the page sections (Timers, Setup, Shared Weekly
+  Progress, Characters, Backup).
+
+
+2026-10-18 (newest 7)
+---------------------
+- New Characters section with a larger title above the character cards, with
+  Refresh all (updates item level and combat power of every looked-up
+  character) and Collapse all / Expand all buttons on the right.
+- Every part of the page now has a large section title: Timers, Setup, Shared
+  Weekly Progress, Characters, Backup.
+- On collapsed cards the bin icon is at the bottom right of the footer row.
+- Renamed to "Odyle Energy (Shared)" and "Daily Dungeon (Shared)"; the Server
+  Run Count title no longer shows a reset countdown.
+
+
+2026-10-18 (newest 6)
+---------------------
+- Add a Character: removed the helper sentence under Region/Server, added
+  divider lines under Region/Server and above the Add character button with a
+  little more space.
+- Item Level and Highest run boxes removed from Add a Character (the game
+  lookup fills in item level; Highest run defaults to Auto).
+- Estimated Income keeps the manual Item Level box and Highest run, so item
+  level can still be typed in without a lookup.
+
+
+2026-10-18 (newest 5)
+---------------------
+- Import button (Backup & transfer) is now green.
+- Server Run Count moved to the left of Weekly Odyle Energy (shared), so the
+  three shared cards sit in one row (stacked on phones).
+- Server Run Count explanation moved into an info (i) icon next to the title.
+
+
+2026-10-18 (newest 4)
+---------------------
+- Collapse all / Expand all button above the character list.
+- Collapsed cards: the Expedition and Transcendence 40 / 80 buttons moved to a
+  footer row at the bottom of the card.
+- Add a Character remembers the Region and Server you last picked (saved in
+  your browser).
+- Game lookup moved into each character's Settings menu (with a divider
+  above it). Settings stays open after a lookup.
+
+
+2026-10-18 (newest 3)
+---------------------
+- Combat power now uses the crossed swords emoji; refresh button uses the
+  circular arrow symbol.
+
+
+2026-10-18 (newest 2)
+---------------------
+- Combat power from the game is shown in blue with a crossed-swords icon next
+  to the item level (for example 147.1K). Hover for the full number.
+- Refresh button (circular arrow) next to the item level and combat power of
+  any looked-up character. One press updates item level, combat power and class.
+- Region label in Add a Character no longer says (optional).
+
+
+2026-10-18 (newest)
+-------------------
+- Game lookup: item level and class icon can be pulled automatically from the
+  official AION 2 character data (through a small Cloudflare Worker relay).
+  Pick Region and Server when adding a character and Add character fills in
+  the item level and class icon. Each character also has a Game lookup box in
+  its Estimated Income section (Update item level button).
+- Item levels of looked-up characters refresh automatically when the page is
+  opened, at most once every 30 minutes per character.
+- A server must be picked whenever a region is chosen. Class dropdown removed
+  from Add a Character (the class comes from the lookup).
+- Estimated Income details moved into an info (i) icon next to the heading.
+- Manual item level box is still there as a fallback.
+
+
+2026-10-18 (earlier)
+--------------------
+- Character limit of 8. The Add character button shows the count (for example
+  3/8) and is disabled once the limit is reached.
+
+
+2026-10-18 (late update)
+------------------------
+- Characters now show two per row on wide screens (one per row on phones).
+  The page is wider, up to about 1400px.
+- Redesigned collapsed character card: evenly spaced stats grid (Energy,
+  Nightmare, Ascension, Odyle Morph, Shop Purchases, Est. Kina).
+- Collapsed cards have Expedition and Transcendence 40 / 80 spend buttons next
+  to Energy, small -1 buttons for Nightmare and Ascension, and the trashcan in
+  the Est. Kina box.
+- Energy is optional when adding a character (a blank box starts at 0).
+
+
+2026-10-18 (evening update)
+---------------------------
+- Shugo Festival and Spacetime Rift countdown timers at the top of the page.
+  Shugo Festival starts every hour on the hour. Spacetime Rift opens every
+  3 hours (02:00, 05:00, 08:00 ... UTC). Both schedules are community-observed,
+  not official.
+- Hard reset button at the bottom of the page (red, with a confirmation step)
+  that deletes all characters and settings in this browser.
+- "Created by daveeb" credit with a Discord icon at the bottom of the page.
+- Add a Character: Character Name and Class now share the first row with titles
+  above them, and all boxes use a 65% / 35% column split.
+- "Left" count and "Resets in" text are larger and clearer in Weekly Odyle
+  Energy (shared) and Daily Dungeon.
+- Collapsed cards show the 80-energy run count first, then the 40-energy count.
+- Removed the footer note about estimates and browser storage.
+
+
+2026-10-18 (earlier today)
+--------------------------
+- Light / dark mode slider (sun and moon) in the top-right corner. One click
+  switches theme. Amber track in light mode, indigo at night. The choice is
+  remembered per browser; until chosen it follows the device setting.
+- New subtitle under the title describing what the tracker covers.
+- Slightly wider +1 / -1 buttons in Daily Dungeon and Weekly Odyle Energy (shared).
+- Weekly Odyle Energy (shared): Craft / Craft All renamed Morph / Morph All,
+  text box now reads "Amount morphed".
+- Info (i) button on Weekly Odyle Energy (shared): hover to see that morphs left
+  are added to the first character's estimated Kina.
+- Collapsed character card shows "N or M runs left" (at 40 or 80 energy each)
+  in the top-right corner.
+- Remove button is now a red trashcan icon in the bottom-right of each card.
+- Item level shows as "iLv 2,100" next to the character name.
+- Class dropdown when adding a character (also in each character's Settings),
+  with a class icon shown beside the name.
+- All buttons are grey with a coloured outline and fill with colour on hover.
+  Button text is brighter.
+- Nightmare / Ascension rows: -1 | Use All | +1 | Extra (negatives on the left,
+  positives on the right). Use All spends every remaining ticket.
+- Odyle Shop Purchases: Purchase All button, same layout as Odyle Morph.
+- Add Charged Energy box and button moved under Charged Energy.
+
+
+Earlier updates
+---------------
+Characters and energy
+- Odyle Energy and Charged Energy per character, with a recharge of +15 every
+  3 hours on the hour (Energy cap 840, Charged Energy cap 2000).
+- Odyle Energy Cubes shown at 40 and 80 energy each.
+- Spend buttons for Expedition and Transcendence (40 or 80) that also add to the
+  server run count.
+- Sync buttons for Energy and Charged Energy, plus an Add Charged Energy box.
+- Collapsible character cards and a collapsible Add a Character card.
+- Character names larger; red Remove button.
+
+Weekly and daily trackers
+- Nightmare tickets with Extra count (cap 14) and Ascension Trial entries with
+  Extra count (cap 30), including reset handling.
+- Odyle Morph (4 per character per week) with Morph All.
+- Odyle Shop Purchases (20 per character per week) with remove-by-amount.
+- Weekly Odyle Energy (shared, 16 per server) with a custom-amount box.
+- Daily Dungeon (shared) with Use, Use All and an amount box.
+- Daily and weekly reset countdowns at the top of the page.
+- Show on page tickboxes to hide Add a Character, Weekly Odyle Energy,
+  Daily Dungeon and Server Run Count.
+
+Kina and server run count
+- Estimated Kina income per character from item level and highest run, based on
+  current energy plus Morph and Shop Purchases left.
+- Server Run Count for Expedition and Transcendence with the cumulative Kina
+  reduction tiers, runs until the next threshold, and a reset timer.
+- Shared Weekly Odyle Energy crafts count toward the first character's estimate.
+
+Page and hosting
+- Page titled "Aion 2 Character Tracker" with a moon favicon.
+- Backup and transfer panel: Export and Import by copy and paste.
+- Hosted on GitHub Pages with browser-only data storage.
