@@ -684,10 +684,14 @@ class FlowPicker:
         self.active = None
         self.last = 0.0
         self.changed = False
+        self.good = set()
+        self.save_out = []
 
     def route(self, key, seq, payload, now):
-        """Return the (seq, payload) pieces to feed to the stream for this flow."""
+        """Return the (seq, payload, time) pieces to feed to the stream for this flow."""
         self.changed = False
+        if key in self.good:
+            self.save_out.append((key, seq, payload, now))
         if self.active == key:
             self.last = now
             return [(seq, payload, now)]
@@ -699,6 +703,7 @@ class FlowPicker:
                 old, _ = self.hold.popitem(last=False)
                 self.score.pop(old, None)
                 self.check.pop(old, None)
+                self.good.discard(old)
             h = self.hold[key] = [0, []]
         else:
             self.hold.move_to_end(key)
@@ -707,7 +712,7 @@ class FlowPicker:
         while h[0] > self.KEEP and len(h[1]) > 1:
             h[0] -= len(h[1].pop(0)[1])
         self.score[key] = sc = self.score.get(key, 0) + payload.count(TAG)
-        if self.active is None and sc < 2 and b"\xff\xff" in payload:
+        if sc < 2 and b"\xff\xff" in payload:
             nxt = self.check.get(key, 4096)       # look for real compressed bundles now and then
             if h[0] >= nxt and nxt <= 262144:
                 self.check[key] = nxt * 4
@@ -716,6 +721,10 @@ class FlowPicker:
                     sc += len(find_bundles(buf)[0])
                 except Exception:
                     pass
+        if sc >= 2 and key not in self.good:
+            self.good.add(key)                    # a game stream (maybe one of several ExitLag routes)
+            for sq, pl, ts in h[1]:
+                self.save_out.append((key, sq, pl, ts))
         if self.active is None and sc >= 2:
             self.active = key
             self.last = now
@@ -792,6 +801,10 @@ def cmd_live(a):
                 return
             key = (t.dport, ip.src, t.sport)
             pieces = picker.route(key, t.seq, payload, time.time())
+            if savef and picker.save_out:
+                for kk, sq, pl, ts in picker.save_out:
+                    save_rec(kk, sq, pl, ts)
+            picker.save_out = []
             if not pieces:
                 return
             if picker.changed:
@@ -802,7 +815,6 @@ def cmd_live(a):
                 s = streams[key] = Stream(st.on_value, st.on_name, st.on_asc, st.on_nm)
             for sq, pl, ts in pieces:
                 st.clock = ts          # replay buffered data with its original timing
-                save_rec(key, sq, pl, ts)
                 s.feed(sq, pl)
             st.clock = time.time()
             return
