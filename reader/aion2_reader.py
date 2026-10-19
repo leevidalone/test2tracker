@@ -749,6 +749,9 @@ def local_ips():
     return out
 
 
+LIVE = {}          # objects shared with the window (see gui_main)
+
+
 def cmd_live(a):
     from scapy.all import sniff, TCP, IP
     st = State()
@@ -759,6 +762,7 @@ def cmd_live(a):
     picker = FlowPicker()
     mine = set()
     savef = open(a.save, "w", buffering=1) if getattr(a, "save", None) else None
+    LIVE.update(state=st, flows=flows, picker=picker, streams=streams)
 
     def save_rec(key, seq, payload, ts):
         if savef:
@@ -973,8 +977,202 @@ def interactive():
         print("Error:", e)
 
 
+TRACKER_URL = "https://leevidalone.github.io/test2tracker/"
+
+
+class _Out:
+    """Replaces stdout/stderr in the window (and when built without a console)."""
+    def __init__(self, q):
+        self.q = q
+
+    def write(self, text):
+        if text:
+            self.q.put(text)
+
+    def flush(self):
+        pass
+
+
+def is_admin():
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return True               # not Windows, or cannot tell
+
+
+def ago(t, now=None):
+    if not t:
+        return "-"
+    d = max(0, int((now or time.time()) - t))
+    if d < 60:
+        return "%ds ago" % d
+    if d < 3600:
+        return "%dm ago" % (d // 60)
+    return "%dh ago" % (d // 3600)
+
+
+def status_of(live, snap, admin_ok, npcap, now=None):
+    """(colour, headline, hint) for the window."""
+    if not npcap:
+        return ("red", "Npcap is missing",
+                "Install Npcap from npcap.com (tick WinPcap API-compatible mode), then start this program again.")
+    if not admin_ok:
+        return ("red", "Needs administrator rights",
+                "Close this window, then right-click the program and choose Run as administrator.")
+    err = live.get("error")
+    if err:
+        return ("red", "Problem", err)
+    pk = live.get("picker")
+    fl = live.get("flows")
+    if (pk and pk.active) or fl:
+        last = max([c.get("updated", 0) for c in snap.get("characters", {}).values()] or [0])
+        via = " (through ExitLag / VPN)" if (pk and pk.active and not fl) else ""
+        hint = ("Last update %s. Swap characters in game to refresh the numbers." % ago(last, now)) if last else \
+            "Connected. Swap characters once in game and each one appears here."
+        return ("green", "Reading the game" + via, hint)
+    return ("amber", "Waiting for the game", "Start Aion 2 and log in. This works with ExitLag or a VPN too.")
+
+
+def gui_main(start_worker=True):
+    import tkinter as tk
+    from tkinter import ttk
+    import queue
+    import webbrowser
+    q = queue.Queue()
+    if start_worker or sys.stdout is None:
+        sys.stdout = sys.stderr = _Out(q)
+    npcap = npcap_ok()
+    admin_ok = is_admin()
+
+    if start_worker and npcap:
+        def work():
+            try:
+                cmd_live(argparse.Namespace(proc="Aion2.exe", wait=True))
+            except SystemExit as e:
+                LIVE["error"] = str(e)
+            except Exception as e:
+                LIVE["error"] = "%s. If this mentions permissions or Npcap, run as administrator." % e
+        threading.Thread(target=work, daemon=True).start()
+
+    BG, CARD, FG, MU, AC = "#14161c", "#1d2029", "#e6e8ee", "#8b91a0", "#4f8cff"
+    DOT = {"green": "#2ecc71", "amber": "#f5a524", "red": "#f0524f"}
+    root = tk.Tk()
+    root.title("Aion 2 Game Reader")
+    root.geometry("640x520")
+    root.minsize(560, 420)
+    root.configure(bg=BG)
+    st = ttk.Style(root)
+    try:
+        st.theme_use("clam")
+    except Exception:
+        pass
+    st.configure("Treeview", background=CARD, fieldbackground=CARD, foreground=FG, rowheight=28,
+                 borderwidth=0, font=("Segoe UI", 10))
+    st.configure("Treeview.Heading", background=BG, foreground=MU, font=("Segoe UI", 9, "bold"), borderwidth=0)
+    st.map("Treeview", background=[("selected", "#2a3350")])
+    st.configure("TButton", font=("Segoe UI", 10), padding=6, background="#2a3350", foreground=FG,
+                 borderwidth=0, focusthickness=0)
+    st.map("TButton", background=[("active", "#3a4a7a")])
+
+    head = tk.Frame(root, bg=BG)
+    head.pack(fill="x", padx=18, pady=(16, 6))
+    tk.Label(head, text="Aion 2 Game Reader", bg=BG, fg=FG, font=("Segoe UI", 16, "bold")).pack(anchor="w")
+    tk.Label(head, text="Reads your own game data on this PC and sends it to the tracker page.",
+             bg=BG, fg=MU, font=("Segoe UI", 9)).pack(anchor="w")
+
+    card = tk.Frame(root, bg=CARD)
+    card.pack(fill="x", padx=18, pady=8)
+    row = tk.Frame(card, bg=CARD)
+    row.pack(fill="x", padx=14, pady=(12, 2))
+    dot = tk.Canvas(row, width=14, height=14, bg=CARD, highlightthickness=0)
+    dot.pack(side="left", padx=(0, 8))
+    oval = dot.create_oval(2, 2, 12, 12, fill=DOT["amber"], outline="")
+    head_lbl = tk.Label(row, text="Starting...", bg=CARD, fg=FG, font=("Segoe UI", 12, "bold"))
+    head_lbl.pack(side="left")
+    hint_lbl = tk.Label(card, text="", bg=CARD, fg=MU, font=("Segoe UI", 9), justify="left", wraplength=560)
+    hint_lbl.pack(anchor="w", padx=14, pady=(0, 12))
+
+    bar = tk.Frame(root, bg=BG)
+    bar.pack(fill="x", padx=18)
+    ttk.Button(bar, text="Open tracker", command=lambda: webbrowser.open(TRACKER_URL)).pack(side="left")
+    log_open = tk.BooleanVar(value=False)
+
+    cols = ("name", "energy", "charged", "asc", "nm", "upd")
+    tv = ttk.Treeview(root, columns=cols, show="headings", height=7, selectmode="none")
+    for c, t, w, an in (("name", "Character", 150, "w"), ("energy", "Energy", 70, "center"),
+                        ("charged", "Charged", 80, "center"), ("asc", "Ascension", 100, "center"),
+                        ("nm", "Nightmare", 100, "center"), ("upd", "Updated", 90, "center")):
+        tv.heading(c, text=t)
+        tv.column(c, width=w, anchor=an, stretch=(c == "name"))
+    tv.tag_configure("cur", foreground=AC)
+    tv.pack(fill="both", expand=True, padx=18, pady=(12, 6))
+
+    logf = tk.Frame(root, bg=BG)
+    logt = tk.Text(logf, height=8, bg=CARD, fg=MU, relief="flat", font=("Consolas", 9), wrap="word")
+    logt.pack(fill="both", expand=True)
+
+    def toggle_log():
+        if log_open.get():
+            logf.pack_forget(); log_open.set(False); lb.config(text="Show details")
+        else:
+            logf.pack(fill="x", padx=18, pady=(0, 6), before=foot); log_open.set(True); lb.config(text="Hide details")
+    lb = ttk.Button(bar, text="Show details", command=toggle_log)
+    lb.pack(side="left", padx=8)
+
+    foot = tk.Label(root, text="Passive reader: it never changes the game. Close this window to stop.",
+                    bg=BG, fg=MU, font=("Segoe UI", 8))
+    foot.pack(anchor="w", padx=18, pady=(0, 10))
+
+    def refresh():
+        try:
+            while True:
+                logt.insert("end", q.get_nowait())
+            logt.see("end")
+            if int(logt.index("end-1c").split(".")[0]) > 600:
+                logt.delete("1.0", "100.0")
+        except queue.Empty:
+            pass
+        stt = LIVE.get("state")
+        snap = stt.snapshot() if stt else {"characters": {}}
+        colour, headline, hint = status_of(LIVE, snap, admin_ok, npcap)
+        dot.itemconfig(oval, fill=DOT[colour])
+        head_lbl.config(text=headline)
+        hint_lbl.config(text=hint)
+        want = []
+        cur = snap.get("current")
+        for name, d in sorted(snap.get("characters", {}).items(), key=lambda kv: -kv[1].get("updated", 0)):
+            asc = "-" if d.get("asc") is None else "%d/3%s" % (d["asc"], " (+%d)" % d["ascExtra"] if d.get("ascExtra") else "")
+            nm = "-" if d.get("nm") is None else "%d/14%s" % (d["nm"], " (+%d)" % d["nmExtra"] if d.get("nmExtra") else "")
+            want.append(((("\u25CF " if name == cur else "") + name), d.get("energy", "-"), d.get("charged", "-"),
+                         asc, nm, ago(d.get("updated"))))
+        have = [tv.item(i, "values") for i in tv.get_children()]
+        if [tuple(str(x) for x in w) for w in want] != [tuple(h) for h in have]:
+            tv.delete(*tv.get_children())
+            for w in want:
+                tv.insert("", "end", values=w, tags=("cur",) if str(w[0]).startswith("\u25CF") else ())
+        root.after(700, refresh)
+    refresh()
+
+    def close():
+        root.destroy()
+        import os
+        os._exit(0)
+    root.protocol("WM_DELETE_WINDOW", close)
+    return root
+
+
 def main():
     if len(sys.argv) == 1:
+        try:
+            root = gui_main()
+            root.mainloop()
+            return
+        except ImportError:
+            auto_live()
+            input("\nPress Enter to close")
+            return
+    if sys.argv[1:] == ["console"]:
         auto_live()
         input("\nPress Enter to close")
         return

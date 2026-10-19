@@ -1,15 +1,17 @@
 Aion 2 game reader
 ==================
-Reads your own game's network traffic on your PC (passively, like Not Meter) and
-serves it to the tracker page at http://127.0.0.1:17520/state. Nothing is uploaded.
+A small window that reads your own game's network traffic on your PC (passively, like
+Not Meter) and sends it to the tracker page. Nothing is uploaded.
 
-Needs: Windows, Npcap (https://npcap.com), run as administrator, ExitLag/VPN off.
+Needs: Windows, Npcap (https://npcap.com), administrator rights.
+Works with ExitLag and other VPNs / game boosters.
 
-Easiest: build the exe
-  1. Install Python 3 and tick "Add to PATH".
-  2. Double-click build_reader_exe.bat (it installs scapy, psutil and PyInstaller).
-  3. Run dist\aion2_reader.exe as administrator and keep the window open (it starts reading by itself; "aion2_reader.exe menu" shows the old menu).
+Use it
+  1. Run aion2_reader.exe (it asks for administrator rights).
+  2. Start Aion 2 and log in. The dot turns green when it sees the game.
+  3. Swap characters once; each one appears in the window and on the tracker page.
 
-Easiest of all: download aion2_reader.exe from the Releases page (built automatically by GitHub).
-
-Or run directly:  python aion2_reader.py  (as administrator)
+Build it yourself
+  Double-click build_reader_exe.bat (needs Python 3 with "Add to PATH").
+  It makes dist\aion2_reader.exe (the window) and dist\aion2_reader_tools.exe
+  (console version for support: aion2_reader_tools.exe diag  /  capture).

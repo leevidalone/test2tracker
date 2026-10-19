@@ -15,15 +15,20 @@ jobs:
           python-version: "3.12"
       - name: Install build tools
         run: python -m pip install scapy psutil pyinstaller
-      - name: Build exe
+      - name: Build app (window)
         working-directory: reader
-        run: python -m PyInstaller --onefile --uac-admin --hidden-import psutil --collect-all scapy --name aion2_reader aion2_reader.py
+        run: python -m PyInstaller --onefile --windowed --uac-admin --hidden-import psutil --collect-all scapy --name aion2_reader aion2_reader.py
+      - name: Build tools (console)
+        working-directory: reader
+        run: python -m PyInstaller --onefile --uac-admin --hidden-import psutil --collect-all scapy --name aion2_reader_tools aion2_reader.py
       - uses: actions/upload-artifact@v4
         with:
           name: aion2_reader
-          path: reader/dist/aion2_reader.exe
+          path: reader/dist/*.exe
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: reader/dist/aion2_reader.exe
+          files: |
+            reader/dist/aion2_reader.exe
+            reader/dist/aion2_reader_tools.exe
