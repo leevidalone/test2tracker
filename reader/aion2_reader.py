@@ -438,6 +438,7 @@ class State:
         self.lock = threading.Lock()
         self.seq = 0
         self.classes = {}
+        self.web = {}
         try:
             with open(CLASS_FILE) as f:
                 self.classes = {str(k): str(v) for k, v in json.load(f).items() if str(v) in CLASS_ICONS}
@@ -445,15 +446,35 @@ class State:
             pass
 
     def set_classes(self, m):
-        """Class of each character, sent by the tracker page (the reader cannot read it from the game)."""
-        ok = {str(k)[:40]: str(v) for k, v in list(m.items())[:200] if str(v) in CLASS_ICONS}
+        """Sent by the tracker page: each character's class, plus the Nightmare / Ascension numbers
+        typed there. {name: "Cleric"} or {name: {"cls", "nm", "nmb", "asc", "ascb"}}. The numbers are
+        only used to fill the cells the game never sent."""
+        def num(v, hi):
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                return None
+            return v if 0 <= v <= hi else None
+        cls, web = {}, {}
+        for k, v in list(m.items())[:200]:
+            k = str(k)[:40]
+            if isinstance(v, dict):
+                c = str(v.get("cls") or "")
+                w = {"nm": num(v.get("nm"), 14), "nmb": num(v.get("nmb"), 14),
+                     "asc": num(v.get("asc"), 3), "ascb": num(v.get("ascb"), 30)}
+                web[k] = {a: b for a, b in w.items() if b is not None}
+            else:
+                c = str(v)
+            if c in CLASS_ICONS:
+                cls[k] = c
         with self.lock:
-            if ok == self.classes:
+            self.web = web
+            if cls == self.classes:
                 return
-            self.classes = ok
+            self.classes = cls
         try:
             with open(CLASS_FILE, "w") as f:
-                json.dump(ok, f)
+                json.dump(cls, f)
         except Exception:
             pass
 
@@ -597,6 +618,7 @@ class State:
                     "charged": self.charged,
                     "characters": json.loads(json.dumps(self.chars)),
                     "classes": dict(self.classes),
+                    "web": json.loads(json.dumps(self.web)),
                     "now": time.time()}
 
 
@@ -639,7 +661,7 @@ def start_server(state, port=HTTP_PORT, extra=()):
             ok = False
             try:
                 n = int(self.headers.get("Content-Length", "0"))
-                if self.path.split("?")[0] == "/classes" and 0 < n <= 20000 and origin_ok(self.headers.get("Origin", ""), extra):
+                if self.path.split("?")[0] == "/classes" and 0 < n <= 60000 and origin_ok(self.headers.get("Origin", ""), extra):
                     m = json.loads(self.rfile.read(n))
                     if isinstance(m, dict):
                         state.set_classes(m)
@@ -1290,6 +1312,12 @@ def gui_main(start_worker=True, theme=None):
         tk.Label(root, text="Passive reader: it never changes the game. Close this window to stop.",
                  bg=P["bg"], fg=P["mu"], font=(FONT, 8)).pack(anchor="w", padx=20, pady=(0, 10))
 
+    def web_of(snap, name):
+        for k, v in (snap.get("web") or {}).items():
+            if k.strip().lower() == name.strip().lower():
+                return v
+        return {}
+
     def cls_of(snap, name):
         m = snap.get("classes") or {}
         for k, v in m.items():
@@ -1315,7 +1343,15 @@ def gui_main(start_worker=True, theme=None):
         for name, d in chars:
             asc = "-" if d.get("asc") is None else "%d/3%s" % (d["asc"], " (+%d)" % d["ascExtra"] if d.get("ascExtra") else "")
             nm = "-" if d.get("nm") is None else "%d/14%s" % (d["nm"], " (+%d)" % d["nmExtra"] if d.get("nmExtra") else "")
-            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, cls_of(snap, name)))
+            w = web_of(snap, name)
+            ascw = nmw = False
+            if d.get("asc") is None and w.get("asc") is not None:      # the game never sent it: use the tracker's number
+                asc = "%d/3%s" % (w["asc"], " (+%d)" % w["ascb"] if w.get("ascb") else "")
+                ascw = True
+            if d.get("nm") is None and w.get("nm") is not None:
+                nm = "%d/14%s" % (w["nm"], " (+%d)" % w["nmb"] if w.get("nmb") else "")
+                nmw = True
+            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, cls_of(snap, name), ascw, nmw))
         stamps = [d.get("updated") for _, d in chars]
         if data == S["sig"]:
             for lab, ts in zip(S.get("upd", []), stamps):      # only the "x s ago" texts change
@@ -1339,13 +1375,14 @@ def gui_main(start_worker=True, theme=None):
             tk.Label(lf, text="No characters yet. Swap characters in game and they appear here.",
                      bg=P["card"], fg=P["mu"], font=(FONT, 10)).pack(pady=24)
             return
-        for (name, is_cur, en, ch, asc, nm, cls), ts in zip(data, stamps):
+        for (name, is_cur, en, ch, asc, nm, cls, ascw, nmw), ts in zip(data, stamps):
             rb = RoundBox(lf, P["card"], P["row"], P["ac"] if is_cur else P["row"], radius=10, pad=8)
             rb.pack(fill="x", pady=3)
             fr = rb.inner
             vals = [name, en, ch, asc, nm, ago(ts)]
             for k, (t, w, an, ex) in enumerate(cols):
-                lab = tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else P["tx"],
+                dim = (k == 3 and ascw) or (k == 4 and nmw)       # from the tracker page, not the game
+                lab = tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else (P["mu"] if dim else P["tx"]),
                                font=(FONT, 10, "bold" if k == 0 else "normal"), anchor=an)
                 if k == 0:
                     lab.config(image=class_img(cls), compound="left", padx=2)

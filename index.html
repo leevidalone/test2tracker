@@ -784,7 +784,7 @@ async function grPoll(){
     j=await r.json();if(!j||j.app!=="aion2_reader"||typeof j.characters!=="object")throw 0}
   catch(e){grS.ok=false;grS.tried=true;grMark();return}
   grS.ok=true;grS.tried=true;grS.cur=j.current||"";
-  try{const cm={};chars.forEach(c=>{if(c.cls&&c.name)cm[String(c.name).trim()]=c.cls});const cj=JSON.stringify(cm);
+  try{const cm={},nw=Date.now();chars.forEach(c=>{if(!c.name)return;const o={};if(c.cls)o.cls=c.cls;if(c.nm!=null){o.nm=nmCalc(c,nw).cur;o.nmb=c.nmb||0}if(c.ascAt){o.asc=ascCalc(c,nw).left;o.ascb=c.ascb||0}if(Object.keys(o).length)cm[String(c.name).trim()]=o});const cj=JSON.stringify(cm);
     if(cj!==grS.cj||!grS.cjOk){fetch(GRURL.replace(/state$/,"classes"),{method:"POST",headers:{"Content-Type":"text/plain"},body:cj,targetAddressSpace:"loopback"}).then(x=>{grS.cjOk=x.ok}).catch(()=>{});grS.cj=cj;grS.cjOk=true}}catch(e){}
   const recs=j.characters||{},now=Date.now();let ch=false;grS.skipped=0;grS.n=0;grS.last=0;
   for(const name of Object.keys(recs)){
