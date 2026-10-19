@@ -463,6 +463,8 @@ class State:
         if not dump:                      # a plain update (spent / gained energy)
             self.emit(e, c, how, swap=False)
         elif self.pend_name and t - self.pend_name[1] <= self.WINDOW:
+            self.name, self.sid = self.pend_name[0], self.pend_name[2]   # a real dump confirms the name
+            self.name_t = t
             self.pend_name = None
             self.emit(e, c, how, swap=True, asc=asc, nm=nm)
         else:                             # swap/login dump: wait for the name
@@ -470,17 +472,20 @@ class State:
 
     def on_name(self, nm, sid=None):
         t = self.clock
-        if nm == self.name and t - self.name_t < 3.0:
+        if self.pend_name and nm == self.pend_name[0] and t - self.pend_name[1] < 3.0:
             return                    # same marker repeated within one swap
-        self.name = nm
-        self.sid = sid
-        self.name_t = t
+        if nm == self.name and t - self.name_t < 3.0:
+            return
+        # A name marker alone proves nothing: other players' names (party, guild, people nearby)
+        # carry the same marker. It only becomes the current character when a swap/login dump
+        # (energy values) arrives with it.
         if self.pend_vals and t - self.pend_vals[3] <= self.WINDOW:
             e, c, how, _, asc, nmv = self.pend_vals
             self.pend_vals = None
+            self.name, self.sid, self.name_t = nm, sid, t
             self.emit(e, c, how, swap=True, asc=asc, nm=nmv)
         else:
-            self.pend_name = (nm, t)
+            self.pend_name = (nm, t, sid)
 
     def tick(self, now=None):
         """Flush anything that has waited long enough."""
@@ -490,19 +495,18 @@ class State:
             self.pend_vals = None
             self.emit(e, c, how, swap=True, asc=asc, nm=nmv)   # a full dump even though no name came
         if self.pend_name and t - self.pend_name[1] > self.WINDOW:
-            nm = self.pend_name[0]
+            self.pend_name = None     # a name with no energy values: not a character swap, ignore it
+
+    def _adopt(self):
+        """Ascension/Nightmare values arriving right after a name marker belong to that swap."""
+        if self.pend_name and self.clock - self.pend_name[1] <= 3.0:
+            self.name, self.sid, self.name_t = self.pend_name[0], self.pend_name[2], self.clock
+            self.last_name = self.name
             self.pend_name = None
-            if nm == self.last_name:
-                pass          # same character again (zone change / entering a trial): nothing changed
-            elif self.last_name is None:
-                print("[%s] %-14s current character (values show up after the next swap/login)"
-                      % (time.strftime("%H:%M:%S"), nm))
-                self.last_name = nm
-            else:
-                self.emit(None, None, "no values sent", swap=True)
 
     def on_asc(self, left, extra):
         """Live Ascension update for the current character (an entry was spent / gained)."""
+        self._adopt()
         if not self.name:
             return
         with self.lock:
@@ -526,6 +530,7 @@ class State:
 
     def on_nm(self, left, extra):
         """Live Nightmare ticket update for the current character (a ticket was used)."""
+        self._adopt()
         if not self.name:
             return
         with self.lock:

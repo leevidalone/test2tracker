@@ -1,0 +1,36 @@
+{
+ "app": "aion2_reader",
+ "version": 1,
+ "seq": 2,
+ "current": "Strike",
+ "energy": 840,
+ "charged": 20,
+ "characters": {
+  "Default": {
+   "energy": 120,
+   "charged": 1135,
+   "updated": 1792388035.3973286,
+   "serverId": 1501,
+   "asc": 1,
+   "ascExtra": 5,
+   "ascUpdated": 1792388035.3973315,
+   "nm": 0,
+   "nmExtra": 0,
+   "nmUpdated": 1792388035.3973322
+  },
+  "Strike": {
+   "energy": 840,
+   "charged": 20,
+   "updated": 1792388035.4101,
+   "serverId": 1501,
+   "asc": 3,
+   "ascExtra": 0,
+   "ascUpdated": 1792388035.4101021,
+   "nm": 2,
+   "nmExtra": 0,
+   "nmUpdated": 1792388035.4101026
+  }
+ },
+ "classes": {},
+ "now": 1792388035.4104807
+}
