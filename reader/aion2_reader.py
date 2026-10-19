@@ -700,7 +700,10 @@ class FlowPicker:
         h = self.hold.get(key)
         if h is None:
             if len(self.hold) >= self.MAXKEYS:
-                old, _ = self.hold.popitem(last=False)
+                old = next((k for k in self.hold if k not in self.good and k != self.active), None)
+                if old is None:
+                    old = next(iter(self.hold))
+                del self.hold[old]
                 self.score.pop(old, None)
                 self.check.pop(old, None)
                 self.good.discard(old)
