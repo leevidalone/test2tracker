@@ -9,28 +9,28 @@
   "Default": {
    "energy": 120,
    "charged": 1135,
-   "updated": 1792388035.3973286,
+   "updated": 1792388167.396786,
    "serverId": 1501,
    "asc": 1,
    "ascExtra": 5,
-   "ascUpdated": 1792388035.3973315,
+   "ascUpdated": 1792388167.3967888,
    "nm": 0,
    "nmExtra": 0,
-   "nmUpdated": 1792388035.3973322
+   "nmUpdated": 1792388167.3967893
   },
   "Strike": {
    "energy": 840,
    "charged": 20,
-   "updated": 1792388035.4101,
+   "updated": 1792388167.4089124,
    "serverId": 1501,
    "asc": 3,
    "ascExtra": 0,
-   "ascUpdated": 1792388035.4101021,
+   "ascUpdated": 1792388167.4089148,
    "nm": 2,
    "nmExtra": 0,
-   "nmUpdated": 1792388035.4101026
+   "nmUpdated": 1792388167.4089153
   }
  },
  "classes": {},
- "now": 1792388035.4104807
+ "now": 1792388167.4092727
 }

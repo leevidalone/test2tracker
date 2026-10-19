@@ -137,7 +137,7 @@ def scan_names(d):
                 nm = raw.decode("utf-8")
             except UnicodeDecodeError:
                 continue
-            if nm.isprintable() and not nm.isspace():
+            if nm.isalnum():          # character names are letters and digits only
                 out.append((m.start(), nm, sid))
     return out
 
