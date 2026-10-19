@@ -461,7 +461,8 @@ class State:
             if isinstance(v, dict):
                 c = str(v.get("cls") or "")
                 w = {"nm": num(v.get("nm"), 14), "nmb": num(v.get("nmb"), 14),
-                     "asc": num(v.get("asc"), 3), "ascb": num(v.get("ascb"), 30)}
+                     "asc": num(v.get("asc"), 3), "ascb": num(v.get("ascb"), 30),
+                     "k": num(v.get("k"), 10000000), "tr": num(v.get("tr"), 1), "cn": num(v.get("cn"), 999)}
                 web[k] = {a: b for a, b in w.items() if b is not None}
             else:
                 c = str(v)
@@ -1187,8 +1188,8 @@ def gui_main(start_worker=True, theme=None):
 
     root = tk.Tk()
     root.title("Aion 2 Game Reader")
-    root.geometry("660x600")
-    root.minsize(560, 460)
+    root.geometry("780x600")
+    root.minsize(700, 460)
     try:                                  # come to the front, even behind the elevated console
         root.lift()
         root.attributes("-topmost", True)
@@ -1312,6 +1313,26 @@ def gui_main(start_worker=True, theme=None):
         tk.Label(root, text="Passive reader: it never changes the game. Close this window to stop.",
                  bg=P["bg"], fg=P["mu"], font=(FONT, 8)).pack(anchor="w", padx=20, pady=(0, 10))
 
+    EXP_T = [(83, 1), (104, .8), (125, .6), (146, .4)]
+    TRA_T = [(55, 1), (69, .8), (83, .6), (97, .4)]
+
+    def est_kina(d, w):
+        """Same estimate as the tracker: (energy + charged) / 40 cubes, each worth the content's Kina
+        times the shared run-count multiplier. The tracker supplies the content and run count."""
+        k, cn = w.get("k"), w.get("cn")
+        if not k or cn is None or not isinstance(d.get("energy"), int) or not isinstance(d.get("charged"), int):
+            return None
+        tbl = TRA_T if w.get("tr") else EXP_T
+        total = 0.0
+        for i in range(max(0, (d["energy"] + d["charged"]) // 40)):
+            m = .2
+            for lim, val in tbl:
+                if cn + i <= lim:
+                    m = val
+                    break
+            total += k * m
+        return int(round(total))
+
     def web_of(snap, name):
         for k, v in (snap.get("web") or {}).items():
             if k.strip().lower() == name.strip().lower():
@@ -1351,7 +1372,9 @@ def gui_main(start_worker=True, theme=None):
             if d.get("nm") is None and w.get("nm") is not None:
                 nm = "%d/14%s" % (w["nm"], " (+%d)" % w["nmb"] if w.get("nmb") else "")
                 nmw = True
-            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, cls_of(snap, name), ascw, nmw))
+            kn = est_kina(d, w)
+            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, cls_of(snap, name), ascw, nmw,
+                         "-" if kn is None else format(kn, ",")))
         stamps = [d.get("updated") for _, d in chars]
         if data == S["sig"]:
             for lab, ts in zip(S.get("upd", []), stamps):      # only the "x s ago" texts change
@@ -1365,7 +1388,7 @@ def gui_main(start_worker=True, theme=None):
         for c in lf.winfo_children():
             c.destroy()
         cols = (("Character", 0, "w", 1), ("Energy", 70, "center", 0), ("Charged", 80, "center", 0),
-                ("Ascension", 96, "center", 0), ("Nightmare", 96, "center", 0), ("Updated", 84, "center", 0))
+                ("Ascension", 96, "center", 0), ("Nightmare", 96, "center", 0), ("Est. Kina", 100, "center", 0), ("Updated", 84, "center", 0))
         hd = tk.Frame(lf, bg=P["card"])
         hd.pack(fill="x", padx=8, pady=(0, 4))
         for k, (t, w, an, ex) in enumerate(cols):
@@ -1375,11 +1398,11 @@ def gui_main(start_worker=True, theme=None):
             tk.Label(lf, text="No characters yet. Swap characters in game and they appear here.",
                      bg=P["card"], fg=P["mu"], font=(FONT, 10)).pack(pady=24)
             return
-        for (name, is_cur, en, ch, asc, nm, cls, ascw, nmw), ts in zip(data, stamps):
+        for (name, is_cur, en, ch, asc, nm, cls, ascw, nmw, kina), ts in zip(data, stamps):
             rb = RoundBox(lf, P["card"], P["row"], P["ac"] if is_cur else P["row"], radius=10, pad=8)
             rb.pack(fill="x", pady=3)
             fr = rb.inner
-            vals = [name, en, ch, asc, nm, ago(ts)]
+            vals = [name, en, ch, asc, nm, kina, ago(ts)]
             for k, (t, w, an, ex) in enumerate(cols):
                 dim = (k == 3 and ascw) or (k == 4 and nmw)       # from the tracker page, not the game
                 lab = tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else (P["mu"] if dim else P["tx"]),
@@ -1388,7 +1411,7 @@ def gui_main(start_worker=True, theme=None):
                     lab.config(image=class_img(cls), compound="left", padx=2)
                 lab.grid(row=0, column=k, sticky="ew")
                 fr.grid_columnconfigure(k, weight=ex, minsize=w)
-                if k == 5:
+                if k == 6:
                     S["upd"].append(lab)
 
     def refresh():
