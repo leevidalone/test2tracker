@@ -1034,9 +1034,35 @@ def status_of(live, snap, admin_ok, npcap, now=None):
     return ("amber", "Waiting for the game", "Start Aion 2 and log in. This works with ExitLag or a VPN too.")
 
 
-def gui_main(start_worker=True):
+PALETTES = {      # same colours as the tracker page
+    "light": dict(bg="#f6f7f9", card="#ffffff", tx="#1a1d23", mu="#667085", bd="#e2e5ea", ac="#4f6bed",
+                  ok="#1a9d5c", wa="#d98a00", er="#e5484d", row="#f1f3f7"),
+    "dark": dict(bg="#14161a", card="#1d2026", tx="#eceef2", mu="#9aa1ad", bd="#2d323b", ac="#7f95ff",
+                 ok="#3ec98a", wa="#f0b13a", er="#f0675c", row="#252932"),
+}
+
+
+def system_theme():
+    try:
+        import winreg
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                           r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+        return "light" if winreg.QueryValueEx(k, "AppsUseLightTheme")[0] else "dark"
+    except Exception:
+        return "dark"
+
+
+def _rr(c, x1, y1, x2, y2, r, **kw):
+    """Rounded rectangle on a canvas."""
+    r = max(1, min(r, (x2 - x1) // 2, (y2 - y1) // 2))
+    pts = [x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r, x2, y2 - r, x2, y2, x2 - r, y2,
+           x1 + r, y2, x1, y2, x1, y2 - r, x1, y1 + r, x1, y1]
+    return c.create_polygon(pts, smooth=True, **kw)
+
+
+def gui_main(start_worker=True, theme=None):
     import tkinter as tk
-    from tkinter import ttk
+    import tkinter.font as tkfont
     import queue
     import webbrowser
     q = queue.Queue()
@@ -1055,103 +1081,177 @@ def gui_main(start_worker=True):
                 LIVE["error"] = "%s. If this mentions permissions or Npcap, run as administrator." % e
         threading.Thread(target=work, daemon=True).start()
 
-    BG, CARD, FG, MU, AC = "#14161c", "#1d2029", "#e6e8ee", "#8b91a0", "#4f8cff"
-    DOT = {"green": "#2ecc71", "amber": "#f5a524", "red": "#f0524f"}
     root = tk.Tk()
     root.title("Aion 2 Game Reader")
-    root.geometry("640x520")
-    root.minsize(560, 420)
-    root.configure(bg=BG)
-    st = ttk.Style(root)
-    try:
-        st.theme_use("clam")
-    except Exception:
-        pass
-    st.configure("Treeview", background=CARD, fieldbackground=CARD, foreground=FG, rowheight=28,
-                 borderwidth=0, font=("Segoe UI", 10))
-    st.configure("Treeview.Heading", background=BG, foreground=MU, font=("Segoe UI", 9, "bold"), borderwidth=0)
-    st.map("Treeview", background=[("selected", "#2a3350")])
-    st.configure("TButton", font=("Segoe UI", 10), padding=6, background="#2a3350", foreground=FG,
-                 borderwidth=0, focusthickness=0)
-    st.map("TButton", background=[("active", "#3a4a7a")])
+    root.geometry("660x600")
+    root.minsize(560, 460)
+    FONT = "Segoe UI"
+    S = {"theme": theme or system_theme(), "log": False, "sig": None}
+    logbuf = []
+    W = {}
 
-    head = tk.Frame(root, bg=BG)
-    head.pack(fill="x", padx=18, pady=(16, 6))
-    tk.Label(head, text="Aion 2 Game Reader", bg=BG, fg=FG, font=("Segoe UI", 16, "bold")).pack(anchor="w")
-    tk.Label(head, text="Reads your own game data on this PC and sends it to the tracker page.",
-             bg=BG, fg=MU, font=("Segoe UI", 9)).pack(anchor="w")
+    class RoundBox(tk.Canvas):
+        """A card with rounded corners; put children in .inner"""
+        def __init__(self, master, parent_bg, fill, outline, radius=14, pad=14):
+            super().__init__(master, highlightthickness=0, bd=0, bg=parent_bg, height=2 * pad + 4)
+            self.fill, self.outline, self.radius, self.pad = fill, outline, radius, pad
+            self.inner = tk.Frame(self, bg=fill)
+            self.win = self.create_window(pad, pad, anchor="nw", window=self.inner)
+            self.bind("<Configure>", self._draw)
+            self.inner.bind("<Configure>", self._fit)
+            self.after_idle(self._fit)
 
-    card = tk.Frame(root, bg=CARD)
-    card.pack(fill="x", padx=18, pady=8)
-    row = tk.Frame(card, bg=CARD)
-    row.pack(fill="x", padx=14, pady=(12, 2))
-    dot = tk.Canvas(row, width=14, height=14, bg=CARD, highlightthickness=0)
-    dot.pack(side="left", padx=(0, 8))
-    oval = dot.create_oval(2, 2, 12, 12, fill=DOT["amber"], outline="")
-    head_lbl = tk.Label(row, text="Starting...", bg=CARD, fg=FG, font=("Segoe UI", 12, "bold"))
-    head_lbl.pack(side="left")
-    hint_lbl = tk.Label(card, text="", bg=CARD, fg=MU, font=("Segoe UI", 9), justify="left", wraplength=560)
-    hint_lbl.pack(anchor="w", padx=14, pady=(0, 12))
+        def _fit(self, e=None):
+            h = self.inner.winfo_reqheight() + 2 * self.pad
+            if int(self.cget("height")) != h:
+                self.configure(height=h)
 
-    bar = tk.Frame(root, bg=BG)
-    bar.pack(fill="x", padx=18)
-    ttk.Button(bar, text="Open tracker", command=lambda: webbrowser.open(TRACKER_URL)).pack(side="left")
-    log_open = tk.BooleanVar(value=False)
+        def _draw(self, e=None):
+            self.delete("bg")
+            w, h = self.winfo_width(), self.winfo_height()
+            _rr(self, 1, 1, w - 1, h - 1, self.radius, fill=self.fill, outline=self.outline, width=1, tags="bg")
+            self.tag_lower("bg")
+            self.itemconfigure(self.win, width=max(1, w - 2 * self.pad))
 
-    cols = ("name", "energy", "charged", "asc", "nm", "upd")
-    tv = ttk.Treeview(root, columns=cols, show="headings", height=7, selectmode="none")
-    for c, t, w, an in (("name", "Character", 150, "w"), ("energy", "Energy", 70, "center"),
-                        ("charged", "Charged", 80, "center"), ("asc", "Ascension", 100, "center"),
-                        ("nm", "Nightmare", 100, "center"), ("upd", "Updated", 90, "center")):
-        tv.heading(c, text=t)
-        tv.column(c, width=w, anchor=an, stretch=(c == "name"))
-    tv.tag_configure("cur", foreground=AC)
-    tv.pack(fill="both", expand=True, padx=18, pady=(12, 6))
-
-    logf = tk.Frame(root, bg=BG)
-    logt = tk.Text(logf, height=8, bg=CARD, fg=MU, relief="flat", font=("Consolas", 9), wrap="word")
-    logt.pack(fill="both", expand=True)
+    class Pill(tk.Canvas):
+        """Outlined button like the ones on the tracker page."""
+        def __init__(self, master, text, command, pal, parent_bg, color=None, radius=10):
+            f = tkfont.Font(family=FONT, size=10, weight="bold")
+            w, h = f.measure(text) + 34, 34
+            super().__init__(master, width=w, height=h, bg=parent_bg, highlightthickness=0, bd=0, cursor="hand2")
+            self.col = color or pal["ac"]
+            self.tx = pal["tx"]
+            self.shape = _rr(self, 2, 2, w - 2, h - 2, radius, fill=parent_bg, outline=self.col, width=2)
+            self.label = self.create_text(w // 2, h // 2, text=text, fill=self.tx, font=f)
+            self.parent_bg = parent_bg
+            self.bind("<Enter>", lambda e: (self.itemconfigure(self.shape, fill=self.col),
+                                            self.itemconfigure(self.label, fill="#ffffff")))
+            self.bind("<Leave>", lambda e: (self.itemconfigure(self.shape, fill=self.parent_bg),
+                                            self.itemconfigure(self.label, fill=self.tx)))
+            self.bind("<Button-1>", lambda e: command())
 
     def toggle_log():
-        if log_open.get():
-            logf.pack_forget(); log_open.set(False); lb.config(text="Show details")
-        else:
-            logf.pack(fill="x", padx=18, pady=(0, 6), before=foot); log_open.set(True); lb.config(text="Hide details")
-    lb = ttk.Button(bar, text="Show details", command=toggle_log)
-    lb.pack(side="left", padx=8)
+        S["log"] = not S["log"]
+        build()
 
-    foot = tk.Label(root, text="Passive reader: it never changes the game. Close this window to stop.",
-                    bg=BG, fg=MU, font=("Segoe UI", 8))
-    foot.pack(anchor="w", padx=18, pady=(0, 10))
+    def toggle_theme():
+        S["theme"] = "light" if S["theme"] == "dark" else "dark"
+        build()
+
+    def build():
+        for c in root.winfo_children():
+            c.destroy()
+        P = PALETTES[S["theme"]]
+        W.clear()
+        root.configure(bg=P["bg"])
+        top = tk.Frame(root, bg=P["bg"])
+        top.pack(fill="x", padx=20, pady=(18, 8))
+        tl = tk.Frame(top, bg=P["bg"])
+        tl.pack(side="left")
+        tk.Label(tl, text="Aion 2 Game Reader", bg=P["bg"], fg=P["tx"], font=(FONT, 17, "bold")).pack(anchor="w")
+        tk.Label(tl, text="Reads your own game data on this PC and sends it to the tracker page.",
+                 bg=P["bg"], fg=P["mu"], font=(FONT, 9)).pack(anchor="w")
+        Pill(top, "\u2600 Light" if S["theme"] == "dark" else "\u263E Dark", toggle_theme, P, P["bg"],
+             color=P["bd"], radius=10).pack(side="right")
+
+        card = RoundBox(root, P["bg"], P["card"], P["bd"])
+        card.pack(fill="x", padx=20, pady=6)
+        row = tk.Frame(card.inner, bg=P["card"])
+        row.pack(fill="x")
+        W["dot"] = tk.Canvas(row, width=16, height=16, bg=P["card"], highlightthickness=0)
+        W["dot"].pack(side="left", padx=(0, 10))
+        W["oval"] = W["dot"].create_oval(2, 2, 14, 14, fill=P["wa"], outline="")
+        W["head"] = tk.Label(row, text="Starting...", bg=P["card"], fg=P["tx"], font=(FONT, 13, "bold"))
+        W["head"].pack(side="left")
+        W["hint"] = tk.Label(card.inner, text="", bg=P["card"], fg=P["mu"], font=(FONT, 9), justify="left",
+                             wraplength=560, anchor="w")
+        W["hint"].pack(fill="x", pady=(4, 0))
+        card.inner.bind("<Configure>", lambda e: (card._fit(), W["hint"].config(wraplength=max(200, card.winfo_width() - 60))), add="+")
+
+        bar = tk.Frame(root, bg=P["bg"])
+        bar.pack(fill="x", padx=20, pady=(8, 4))
+        Pill(bar, "Open tracker", lambda: webbrowser.open(TRACKER_URL), P, P["bg"]).pack(side="left")
+        Pill(bar, "Hide details" if S["log"] else "Show details", toggle_log, P, P["bg"],
+             color=P["bd"]).pack(side="left", padx=10)
+
+        lst = RoundBox(root, P["bg"], P["card"], P["bd"], pad=12)
+        lst.pack(fill="both", expand=True, padx=20, pady=(8, 6))
+        lst._fit = lambda e=None: None            # this card fills the free space
+        W["list"] = tk.Frame(lst.inner, bg=P["card"])
+        W["list"].pack(fill="both", expand=True)
+        W["P"] = P
+        S["sig"] = None
+
+        if S["log"]:
+            lg = RoundBox(root, P["bg"], P["card"], P["bd"], pad=10)
+            lg.pack(fill="x", padx=20, pady=(0, 6))
+            W["logt"] = tk.Text(lg.inner, height=7, bg=P["card"], fg=P["mu"], relief="flat",
+                                font=("Consolas", 9), wrap="word", highlightthickness=0)
+            W["logt"].pack(fill="x")
+            W["logt"].insert("end", "".join(logbuf))
+            W["logt"].see("end")
+        tk.Label(root, text="Passive reader: it never changes the game. Close this window to stop.",
+                 bg=P["bg"], fg=P["mu"], font=(FONT, 8)).pack(anchor="w", padx=20, pady=(0, 10))
+
+    def render_rows(snap):
+        P = W["P"]
+        cur = snap.get("current")
+        chars = sorted(snap.get("characters", {}).items(), key=lambda kv: -kv[1].get("updated", 0))
+        data = []
+        for name, d in chars:
+            asc = "-" if d.get("asc") is None else "%d/3%s" % (d["asc"], " (+%d)" % d["ascExtra"] if d.get("ascExtra") else "")
+            nm = "-" if d.get("nm") is None else "%d/14%s" % (d["nm"], " (+%d)" % d["nmExtra"] if d.get("nmExtra") else "")
+            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, ago(d.get("updated"))))
+        if data == S["sig"]:
+            return
+        S["sig"] = data
+        lf = W["list"]
+        for c in lf.winfo_children():
+            c.destroy()
+        cols = (("Character", 0, "w", 1), ("Energy", 70, "center", 0), ("Charged", 80, "center", 0),
+                ("Ascension", 96, "center", 0), ("Nightmare", 96, "center", 0), ("Updated", 84, "center", 0))
+        hd = tk.Frame(lf, bg=P["card"])
+        hd.pack(fill="x", padx=8, pady=(0, 4))
+        for k, (t, w, an, ex) in enumerate(cols):
+            tk.Label(hd, text=t, bg=P["card"], fg=P["mu"], font=(FONT, 9, "bold"), anchor=an).grid(row=0, column=k, sticky="ew")
+            hd.grid_columnconfigure(k, weight=ex, minsize=w)
+        if not data:
+            tk.Label(lf, text="No characters yet. Swap characters in game and they appear here.",
+                     bg=P["card"], fg=P["mu"], font=(FONT, 10)).pack(pady=24)
+            return
+        for name, is_cur, en, ch, asc, nm, up in data:
+            rb = RoundBox(lf, P["card"], P["row"], P["ac"] if is_cur else P["row"], radius=10, pad=8)
+            rb.pack(fill="x", pady=3)
+            fr = rb.inner
+            vals = [("\u25CF " if is_cur else "") + name, en, ch, asc, nm, up]
+            for k, (t, w, an, ex) in enumerate(cols):
+                tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else P["tx"],
+                         font=(FONT, 10, "bold" if k == 0 else "normal"), anchor=an).grid(row=0, column=k, sticky="ew")
+                fr.grid_columnconfigure(k, weight=ex, minsize=w)
 
     def refresh():
+        P = W["P"]
         try:
             while True:
-                logt.insert("end", q.get_nowait())
-            logt.see("end")
-            if int(logt.index("end-1c").split(".")[0]) > 600:
-                logt.delete("1.0", "100.0")
+                t = q.get_nowait()
+                logbuf.append(t)
+                if "logt" in W:
+                    W["logt"].insert("end", t)
+                    W["logt"].see("end")
+            del logbuf[:-600]
         except queue.Empty:
             pass
         stt = LIVE.get("state")
         snap = stt.snapshot() if stt else {"characters": {}}
         colour, headline, hint = status_of(LIVE, snap, admin_ok, npcap)
-        dot.itemconfig(oval, fill=DOT[colour])
-        head_lbl.config(text=headline)
-        hint_lbl.config(text=hint)
-        want = []
-        cur = snap.get("current")
-        for name, d in sorted(snap.get("characters", {}).items(), key=lambda kv: -kv[1].get("updated", 0)):
-            asc = "-" if d.get("asc") is None else "%d/3%s" % (d["asc"], " (+%d)" % d["ascExtra"] if d.get("ascExtra") else "")
-            nm = "-" if d.get("nm") is None else "%d/14%s" % (d["nm"], " (+%d)" % d["nmExtra"] if d.get("nmExtra") else "")
-            want.append(((("\u25CF " if name == cur else "") + name), d.get("energy", "-"), d.get("charged", "-"),
-                         asc, nm, ago(d.get("updated"))))
-        have = [tv.item(i, "values") for i in tv.get_children()]
-        if [tuple(str(x) for x in w) for w in want] != [tuple(h) for h in have]:
-            tv.delete(*tv.get_children())
-            for w in want:
-                tv.insert("", "end", values=w, tags=("cur",) if str(w[0]).startswith("\u25CF") else ())
+        col = {"green": P["ok"], "amber": P["wa"], "red": P["er"]}[colour]
+        W["dot"].itemconfig(W["oval"], fill=col)
+        W["head"].config(text=headline)
+        W["hint"].config(text=hint)
+        render_rows(snap)
         root.after(700, refresh)
+
+    build()
     refresh()
 
     def close():
