@@ -706,6 +706,38 @@ document.getElementById("pc").onclick=ev=>{
   srv[k]=Math.min(9999,v);srv[k+"at"]=Date.now();saveSrv();render();
 };
 setInterval(()=>{const now=Date.now();let ex=false;document.querySelectorAll(".nxt").forEach(e=>{const d=+e.dataset.t-now;if(d<=0)ex=true;else e.textContent=cd(d)});if(ex&&(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName)))render()},1000);
+function lkDefault(){let x=null;try{x=JSON.parse(localStorage.getItem(KEY+"-addlk"))}catch(e){}
+  if(x&&x.region&&x.server)return {region:x.region,server:x.server};
+  const o=chars.find(k=>k.lk&&k.lk.region&&k.lk.server);return o?{region:o.lk.region,server:o.lk.server}:null}
+const grReg={};
+async function gameLookup(c){
+  c.glTry=Date.now();
+  const sid=Number(c.gsid)||0,d=lkDefault();let j=null,reg=null;
+  try{
+    if(sid){
+      const known=chars.find(k=>k.lk&&Number(k.lk.serverId)===sid);
+      const order=[];[grReg[sid],known&&known.lk.region,d&&d.region].forEach(x=>{if(x&&!order.includes(x))order.push(x)});
+      REGIONS.forEach(r=>{if(!order.includes(r[0]))order.push(r[0])});
+      for(const r of order){
+        let x=await fetchIL(c.name,r,sid);
+        if(x&&x.matches){const m=x.matches.find(m=>Number(m.serverId)===sid);x=m?await fetchIL(c.name,r,m.serverId):{error:"not found"}}
+        if(x&&x.itemLevel!=null&&(x.serverId==null||Number(x.serverId)===sid)){j=x;reg=r;grReg[sid]=r;break}
+      }
+      if(!j)j={error:"not found"};
+      applyIL(c,j,c.name,reg||(d&&d.region)||"naw",(j&&j.serverName)||"");return}
+    if(!d)return;
+    j=await fetchIL(c.name,d.region,"");
+    if(j&&j.matches){const x=j.matches.find(m=>String(m.serverName).toLowerCase()===d.server.toLowerCase());j=x?await fetchIL(c.name,d.region,x.serverId):{error:"not found"}}
+    else if(j&&j.itemLevel!=null&&String(j.serverName).toLowerCase()!==d.server.toLowerCase())j={error:"not found"}
+  }catch(e){j=null}
+  applyIL(c,j,c.name,d?d.region:"naw",d?d.server:"");
+}
+let grLkBusy=false;
+async function grLookups(){
+  if(grLkBusy)return;grLkBusy=true;let ch=false;
+  try{for(const c of chars){if(!c.auto||c.lk)continue;if(!c.gsid&&!lkDefault())continue;if(c.glTry&&Date.now()-c.glTry<600000)continue;await gameLookup(c);ch=true}}finally{grLkBusy=false}
+  if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render();grMark()}
+}
 const GRKEY=KEY+"-gr",GRURL="http://127.0.0.1:17520/state";
 let gr={on:false};try{const x=JSON.parse(localStorage.getItem(GRKEY));if(x&&x.on)gr.on=true}catch(e){}
 const grS={ok:false,cur:"",n:0,last:0,skipped:0,tried:false};
@@ -715,7 +747,7 @@ function grMark(){
   sw.setAttribute("aria-checked",gr.on?"true":"false");
   if(!gr.on)st.textContent="Off. Turn on while the reader program is running to update energy straight from the game.";
   else if(!grS.ok)st.textContent=grS.tried?"Reader not found. Start the reader program on this PC (game running, ExitLag off). Looking again every few seconds...":"Looking for the reader...";
-  else st.textContent="Connected"+(grS.cur?" \u00B7 current character: "+grS.cur:"")+" \u00B7 "+grS.n+" character"+(grS.n===1?"":"s")+" seen"+(grS.last?" \u00B7 last update "+new Date(grS.last).toLocaleTimeString():"")+(grS.skipped?" \u00B7 "+grS.skipped+" not added (character limit)":"");
+  else st.textContent="Connected"+(grS.cur?" \u00B7 current character: "+grS.cur:"")+" \u00B7 "+grS.n+" character"+(grS.n===1?"":"s")+" seen"+(grS.last?" \u00B7 last update "+new Date(grS.last).toLocaleTimeString():"")+(grS.skipped?" \u00B7 "+grS.skipped+" not added (character limit)":"")+(chars.some(c=>c.auto&&!c.lk&&!c.gsid)&&!lkDefault()?" \u00B7 Pick a Region and Server under Add a Character to fill item level and combat power for game-added characters":"");
 }
 async function grPoll(){
   if(!gr.on)return;
@@ -733,14 +765,14 @@ async function grPoll(){
     let c=chars.find(x=>String(x.name).trim().toLowerCase()===name.trim().toLowerCase());
     if(!c){
       if(chars.length>=MAXC){grS.skipped++;continue}
-      c={id:now+Math.random(),name:name.trim().slice(0,30),base:0,at:ts,cap:840,amt:15,hrs:3,eb:0,nm:0,nmAt:now,nmb:0,asc:0,ascAt:now,ascb:0,il:0,run:(document.getElementById("runsel")||{}).value||"",cls:"",auto:true,gameAt:0};
+      c={id:now+Math.random(),name:name.trim().slice(0,30),base:0,at:ts,cap:840,amt:15,hrs:3,eb:0,nm:0,nmAt:now,nmb:0,asc:0,ascAt:now,ascb:0,il:0,run:(document.getElementById("runsel")||{}).value||"",cls:"",auto:true,gameAt:0,gsid:Number(r.serverId)||0};
       chars.push(c);ch=true}
     if(c.auto&&ts>(c.gameAt||0)){
       c.base=Math.max(0,Math.min(100000,Math.round(Number(r.energy)||0)));c.at=ts;
-      c.eb=Math.max(0,Math.min(2000,Math.round(Number(r.charged)||0)));c.gameAt=ts;ch=true}
+      c.eb=Math.max(0,Math.min(2000,Math.round(Number(r.charged)||0)));c.gameAt=ts;if(Number(r.serverId))c.gsid=Number(r.serverId);ch=true}
   }
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
-  grMark();
+  grMark();grLookups();
 }
 document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grMark();if(gr.on)grPoll()};
 setInterval(grPoll,3000);
