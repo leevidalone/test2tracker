@@ -23,7 +23,11 @@ main[hidden]{display:none}
 .pgl{display:block;padding:9px 12px;border-radius:8px;color:var(--tx);text-decoration:none;font-weight:600;border:1px solid transparent}
 .pgl:hover{background:var(--bg)}
 .pgl[aria-current="page"]{background:var(--bg);border-color:var(--ac);color:var(--ac)}
-.sidefoot{margin-top:auto;padding:10px;display:flex}
+.sidefoot{margin-top:auto;padding:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.clb{font-size:.78rem;padding:6px 10px;border-radius:999px;background:transparent;color:var(--mu);border:1px solid var(--bd);cursor:pointer}.clb:hover{color:var(--ac);border-color:var(--ac)}
+#cldlg{width:min(680px,92vw);max-height:80vh;padding:0;border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx)}#cldlg::backdrop{background:rgba(0,0,0,.5)}
+#cldlg header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd)}
+#cldlg pre{margin:0;padding:14px 16px;overflow:auto;max-height:calc(80vh - 60px);white-space:pre-wrap;font:.82rem/1.5 ui-monospace,Consolas,monospace}
 @media (max-width:760px){
   .shell{display:block}
   .side{position:static;width:auto;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 12px;border-right:0;border-bottom:1px solid var(--bd)}
@@ -194,7 +198,7 @@ button:hover:not(:disabled){background:var(--hc)!important;color:#fff!important;
   <div class="sidelbl">Pages</div>
   <a href="#char" class="pgl" data-pg="char">Character Tracker</a>
   <a href="#pet" class="pgl" data-pg="pet">Pet Tracker</a>
-  <div class="sidefoot"><button type="button" class="thm" id="thm" role="switch" aria-label="Dark mode" title="Toggle light / dark mode"><span class="k"><svg class="su" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="mo" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span></button></div>
+  <div class="sidefoot"><button type="button" class="clb" id="clbtn">Changelog</button><button type="button" class="thm" id="thm" role="switch" aria-label="Dark mode" title="Toggle light / dark mode"><span class="k"><svg class="su" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="mo" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span></button></div>
 </nav>
 <div class="pages">
 <main id="pg-char">
@@ -815,5 +819,10 @@ visApply();
 setInterval(grPoll,3000);
 load();chars.forEach(c=>{if(c.eb>2000)c.eb=2000;if(c.nmb>14)c.nmb=14;if(c.ascb>30)c.ascb=30});grEnforce();render();autoIL();grMark();grPoll();setInterval(()=>{if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()},30000);
 </script>
+<dialog id="cldlg"><header><b>Changelog</b><button type="button" class="g" id="clx">Close</button></header><pre id="clpre">Loading…</pre></dialog>
+<script>(function(){const d=document.getElementById("cldlg"),p=document.getElementById("clpre");let got=false;
+document.getElementById("clbtn").onclick=()=>{d.showModal();if(got)return;
+fetch("CHANGELOG.txt",{cache:"no-store"}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(x=>{p.textContent=x;got=true}).catch(()=>{p.textContent="Could not load the changelog right now."})};
+document.getElementById("clx").onclick=()=>d.close();d.addEventListener("click",e=>{if(e.target===d)d.close()})})()</script>
 </body>
 </html>
