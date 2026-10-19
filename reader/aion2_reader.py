@@ -988,6 +988,13 @@ class _Out:
     def write(self, text):
         if text:
             self.q.put(text)
+            real = sys.__stdout__
+            if real is not None:          # also show it in the console when there is one
+                try:
+                    real.write(text)
+                    real.flush()
+                except Exception:
+                    pass
 
     def flush(self):
         pass
@@ -1060,6 +1067,28 @@ def _rr(c, x1, y1, x2, y2, r, **kw):
     return c.create_polygon(pts, smooth=True, **kw)
 
 
+def report_crash(text):
+    """Make a failure visible: log file next to the program, console, and a message box."""
+    import os
+    try:
+        base = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.getcwd()
+        with open(os.path.join(base, "aion2_reader_error.log"), "a") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S") + "\n" + text + "\n")
+    except Exception:
+        pass
+    try:
+        if sys.__stdout__ is not None:
+            sys.__stdout__.write(text + "\n")
+    except Exception:
+        pass
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, "The reader hit a problem:\n\n" + text[-900:] +
+                                         "\n\n(also saved to aion2_reader_error.log)", "Aion 2 Game Reader", 0x10)
+    except Exception:
+        pass
+
+
 def gui_main(start_worker=True, theme=None):
     import tkinter as tk
     import tkinter.font as tkfont
@@ -1085,6 +1114,21 @@ def gui_main(start_worker=True, theme=None):
     root.title("Aion 2 Game Reader")
     root.geometry("660x600")
     root.minsize(560, 460)
+    try:                                  # come to the front, even behind the elevated console
+        root.lift()
+        root.attributes("-topmost", True)
+        root.after(600, lambda: root.attributes("-topmost", False))
+        root.focus_force()
+    except Exception:
+        pass
+
+    def tk_error(exc, val, tb):
+        import traceback
+        txt = "".join(traceback.format_exception(exc, val, tb))
+        logbuf.append(txt)
+        report_crash(txt) if not LIVE.get("tk_err") else None
+        LIVE["tk_err"] = True
+    root.report_callback_exception = tk_error
     FONT = "Segoe UI"
     S = {"theme": theme or system_theme(), "log": False, "sig": None}
     logbuf = []
@@ -1264,6 +1308,7 @@ def gui_main(start_worker=True, theme=None):
 
 def main():
     if len(sys.argv) == 1:
+        print("Opening the reader window...")
         try:
             root = gui_main()
             root.mainloop()
@@ -1271,6 +1316,10 @@ def main():
         except ImportError:
             auto_live()
             input("\nPress Enter to close")
+            return
+        except Exception:
+            import traceback
+            report_crash(traceback.format_exc())
             return
     if sys.argv[1:] == ["console"]:
         auto_live()
