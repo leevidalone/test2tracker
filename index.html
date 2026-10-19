@@ -556,7 +556,7 @@ document.getElementById("list").onclick=ev=>{
       else if(k==="ascb")c.ascb=Math.min(30,v);
       else if(k==="il")c.il=Math.min(10000,v)}}
   else if(b.dataset.a==="tog"){c.col=!c.col}
-  else if(b.dataset.a==="auto"){c.auto=!c.auto;if(c.auto){c.gameAt=0;c.gameAscAt=0}if(c.auto&&gr.on)setTimeout(grPoll,50)}
+  else if(b.dataset.a==="auto"){c.auto=!c.auto;if(c.auto){c.gameAt=0;c.gameAscAt=0;c.gameNmAt=0}if(c.auto&&gr.on)setTimeout(grPoll,50)}
   else if(b.dataset.a==="espend"){
     const now=Date.now(),amt=parseInt(b.dataset.n,10),cur=calc(c,now).cur,eb=c.eb||0;
     if(cur+eb<amt)return;
@@ -760,7 +760,7 @@ async function grPoll(){
   const recs=j.characters||{},now=Date.now();let ch=false;grS.skipped=0;grS.n=0;grS.last=0;
   for(const name of Object.keys(recs)){
     const r=recs[name];if(!r||typeof name!=="string"||!name.trim())continue;
-    const ts=Number(r.updated)>0?Math.round(Number(r.updated)*1000):0,ats=Number(r.ascUpdated)>0?Math.round(Number(r.ascUpdated)*1000):0;if(!(ts>0)&&!(ats>0))continue;
+    const ts=Number(r.updated)>0?Math.round(Number(r.updated)*1000):0,ats=Number(r.ascUpdated)>0?Math.round(Number(r.ascUpdated)*1000):0,nts=Number(r.nmUpdated)>0?Math.round(Number(r.nmUpdated)*1000):0;if(!(ts>0)&&!(ats>0)&&!(nts>0))continue;
     if(ts>0){grS.n++;if(ts>grS.last)grS.last=ts}
     let c=chars.find(x=>String(x.name).trim().toLowerCase()===name.trim().toLowerCase());
     if(!c){
@@ -775,6 +775,10 @@ async function grPoll(){
       if(r.asc!=null&&Number.isFinite(Number(r.asc))){c.asc=Math.max(0,Math.min(3,3-Math.round(Number(r.asc))));c.ascAt=ats}
       if(r.ascExtra!=null&&Number.isFinite(Number(r.ascExtra)))c.ascb=Math.max(0,Math.min(30,Math.round(Number(r.ascExtra))));
       c.gameAscAt=ats;ch=true}
+    if(c.auto&&nts>0&&nts>(c.gameNmAt||0)){
+      if(r.nm!=null&&Number.isFinite(Number(r.nm))){c.nm=Math.max(0,Math.min(14,Math.round(Number(r.nm))));c.nmAt=nts}
+      if(r.nmExtra!=null&&Number.isFinite(Number(r.nmExtra)))c.nmb=Math.max(0,Math.min(14,Math.round(Number(r.nmExtra))));
+      c.gameNmAt=nts;ch=true}
   }
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
   grMark();grLookups();
