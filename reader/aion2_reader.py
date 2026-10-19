@@ -736,6 +736,11 @@ def cmd_live(a):
     stop = threading.Event()
     picker = FlowPicker()
     mine = set()
+    savef = open(a.save, "a", buffering=1) if getattr(a, "save", None) else None
+
+    def save_rec(key, seq, payload, ts):
+        if savef:
+            savef.write(json.dumps({"t": ts, "dir": "in", "flow": "tcp-%s-%s:%s" % tuple(key), "seq": seq, "hex": payload.hex()}) + "\n")
 
     def refresh():
         while not stop.is_set():
@@ -787,6 +792,7 @@ def cmd_live(a):
                 s = streams[key] = Stream(st.on_value, st.on_name, st.on_asc, st.on_nm)
             for sq, pl, ts in pieces:
                 st.clock = ts          # replay buffered data with its original timing
+                save_rec(key, sq, pl, ts)
                 s.feed(sq, pl)
             st.clock = time.time()
             return
@@ -797,6 +803,7 @@ def cmd_live(a):
                 if s is None:
                     s = streams[key] = Stream(st.on_value, st.on_name, st.on_asc, st.on_nm)
                 st.clock = time.time()
+                save_rec(key, t.seq, payload, st.clock)
                 s.feed(t.seq, payload)
                 return
     def status():
@@ -822,13 +829,13 @@ def cmd_live(a):
             names = None
         try:
             if names:
-                sniff(iface=names, filter="tcp", prn=on, store=False)
+                sniff(iface=names, filter="tcp", prn=on, store=False, timeout=getattr(a, "secs", None))
             else:
-                sniff(filter="tcp", prn=on, store=False)
+                sniff(filter="tcp", prn=on, store=False, timeout=getattr(a, "secs", None))
         except KeyboardInterrupt:
             raise
         except Exception:
-            sniff(filter="tcp", prn=on, store=False)
+            sniff(filter="tcp", prn=on, store=False, timeout=getattr(a, "secs", None))
     except KeyboardInterrupt:
         pass
     stop.set()
@@ -953,6 +960,20 @@ def main():
             cmd_diag(ap.parse_args())
         except Exception as e:
             print("Error:", e)
+        input("\nPress Enter to close")
+        return
+    if sys.argv[1:2] == ["capture"]:
+        ap = argparse.ArgumentParser(); ap.add_argument("capture")
+        ap.add_argument("--secs", type=int, default=150); ap.add_argument("--out", default="aion2_capture.jsonl")
+        x = ap.parse_args()
+        print("Capturing game data for %d seconds into %s. Log in / swap characters now.\n" % (x.secs, x.out))
+        try:
+            cmd_live(argparse.Namespace(proc="Aion2.exe", wait=True, save=x.out, secs=x.secs))
+        except SystemExit as e:
+            print(e)
+        except Exception as e:
+            print("Error:", e)
+        print("\nSaved %s next to the program. Send me that file." % x.out)
         input("\nPress Enter to close")
         return
     if sys.argv[1:] == ["menu"]:
