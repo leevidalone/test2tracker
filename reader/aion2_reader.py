@@ -746,7 +746,7 @@ def cmd_live(a):
     stop = threading.Event()
     picker = FlowPicker()
     mine = set()
-    savef = open(a.save, "a", buffering=1) if getattr(a, "save", None) else None
+    savef = open(a.save, "w", buffering=1) if getattr(a, "save", None) else None
 
     def save_rec(key, seq, payload, ts):
         if savef:
