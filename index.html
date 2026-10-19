@@ -139,6 +139,10 @@ label{font-size:.85rem;color:var(--mu);display:flex;flex-direction:column;gap:2p
 .lhead h2.sech{margin:0}
 .lbtns{display:flex;gap:8px;flex-wrap:wrap}
 .lbtns button{padding:6px 14px;font-size:.88rem}
+.grdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#8a8f98;margin-right:7px;vertical-align:middle}.grdot.ok{background:#1a9d5c;box-shadow:0 0 0 3px rgba(26,157,92,.2)}.grdot.wait{background:#e5a50a;animation:grp 1.4s infinite}@keyframes grp{50%{opacity:.35}}
+.grbadge{font-style:normal;font-weight:600;font-size:.72rem;color:var(--mu);border:1px solid var(--bd);border-radius:20px;padding:1px 8px;margin-left:4px;vertical-align:middle}
+.grhelp{margin-top:10px;border-top:1px solid var(--bd);padding-top:8px}.grhelp ol{margin:8px 0 6px 20px;padding:0;font-size:.85rem;color:var(--tx);line-height:1.6}.grhelp p{margin:4px 0 0;font-size:.78rem;color:var(--mu)}.grhelp a{color:var(--ac)}
+.grdlb{display:inline-block;margin-left:4px;padding:2px 10px;border:1px solid var(--ac);border-radius:6px;font-size:.8rem;font-weight:600;text-decoration:none}
 .name.hd{flex:0 1 auto}.row>.autob{margin:0 auto}.row>.autob:last-child{margin:0 0 0 auto}.autob{padding:3px 9px!important;font-size:.78rem!important;margin-left:8px;white-space:nowrap;vertical-align:middle;font-weight:600}.autob.on{color:#1a9d5c!important;border-color:#1a9d5c!important}
 .memrow{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
 .memrow span{flex:1;min-width:0}.memrow span small{display:block;color:var(--mu);font-size:.8rem;margin-top:2px}
@@ -197,7 +201,17 @@ button:hover:not(:disabled){background:var(--hc)!important;color:#fff!important;
 <div class="top"><h1>Aion 2 Character Tracker</h1></div>
 <p class="sub">Track Odyle Energy, weekly entries, Odyle Morph and shop purchases, shared server crafts and run counts, and estimated Kina income for all your characters. Saved in your browser only. <span class="sech" style="display:block;margin:16px 0 8px">Timers</span><span class="reset" id="reset"></span></p>
 <h2 class="sech sep">Setup</h2>
-<div class="card" id="vis"><div class="row" style="justify-content:flex-start;gap:8px"><button class="g tog" id="vistog" type="button" aria-label="Collapse or expand Show on page">▾</button><b>Show on page</b></div><div id="visbody"><div class="row" style="margin-top:8px;gap:16px"><label><input type="checkbox" data-v="add">Add a Character</label><label><input type="checkbox" data-v="srv">Odyle Energy</label><label><input type="checkbox" data-v="dd">Daily Dungeon</label><label><input type="checkbox" data-v="pc">Server Run Count</label></div><div class="memrow"><img id="memimg" alt="" height="34"><span><b>Membership</b><small>Turn on if you have the membership. Enables the Odyle Shop Purchases (Windbreeze Merchants).</small></span><button type="button" class="msw" id="memsw" role="switch" aria-checked="true" aria-label="Membership"><span class="k"></span></button></div><div class="memrow"><span><b>Game reader</b><small id="grstat">Off. Turn on while the reader program is running to update energy straight from the game.</small></span><button type="button" class="msw" id="grsw" role="switch" aria-checked="false" aria-label="Game reader"><span class="k"></span></button></div></div></div>
+<div class="card" id="vis"><div class="row" style="justify-content:flex-start;gap:8px"><button class="g tog" id="vistog" type="button" aria-label="Collapse or expand Show on page">▾</button><b>Show on page</b></div><div id="visbody"><div class="row" style="margin-top:8px;gap:16px"><label><input type="checkbox" data-v="add">Add a Character</label><label><input type="checkbox" data-v="srv">Odyle Energy</label><label><input type="checkbox" data-v="dd">Daily Dungeon</label><label><input type="checkbox" data-v="pc">Server Run Count</label></div><div class="memrow"><img id="memimg" alt="" height="34"><span><b>Membership</b><small>Turn on if you have the membership. Enables the Odyle Shop Purchases (Windbreeze Merchants).</small></span><button type="button" class="msw" id="memsw" role="switch" aria-checked="true" aria-label="Membership"><span class="k"></span></button></div><div class="memrow"><span><b><i class="grdot" id="grdot"></i>Game reader <em id="grbadge" class="grbadge">Off</em></b><small id="grstat">Off. Turn on while the reader program is running to update energy straight from the game.</small></span><button type="button" class="msw" id="grsw" role="switch" aria-checked="false" aria-label="Game reader"><span class="k"></span></button></div>
+<details class="grhelp" id="grhelp"><summary>How to set up the game reader</summary>
+<ol>
+<li>Install <b>Npcap</b> once (tick "WinPcap API-compatible mode" if asked). <a href="https://npcap.com/#download" target="_blank" rel="noopener">Get Npcap</a></li>
+<li>Download the reader program and run it <b>as administrator</b> on the PC you play on. Keep its window open. <span id="grdl"></span></li>
+<li>Turn <b>ExitLag</b> (or any game VPN or booster) off, then start Aion 2.</li>
+<li>Switch on <b>Game reader</b> above. The badge turns green when the reader is found.</li>
+<li>Log in or swap characters once. Each character appears here by itself, set to Auto.</li>
+</ol>
+<p>The reader only watches game traffic on your own PC and sends it to this page on your own computer. Nothing is uploaded, and the game is never modified.</p>
+</details></div></div>
 
 <div class="card" id="addcard">
   <div class="row">
@@ -742,11 +756,17 @@ async function grLookups(){
 const GRKEY=KEY+"-gr",GRURL="http://127.0.0.1:17520/state";
 let gr={on:false};try{const x=JSON.parse(localStorage.getItem(GRKEY));if(x&&x.on)gr.on=true}catch(e){}
 const grS={ok:false,cur:"",n:0,last:0,skipped:0,tried:false};
+const READER_URL="https://github.com/leevidalone/test2tracker/tree/main/reader";
+(function(){const e=document.getElementById("grdl");if(e&&READER_URL)e.innerHTML=`<a class="grdlb" href="${READER_URL}" target="_blank" rel="noopener">Get the reader</a>`})();
 function grEnforce(){if(gr.on)return false;let ch=false;chars.forEach(c=>{if(c.auto){c.auto=false;ch=true}});if(ch)save();return ch}
 function grSave(){try{localStorage.setItem(GRKEY,JSON.stringify({on:gr.on}))}catch(e){}}
 function grMark(){
   const sw=document.getElementById("grsw"),st=document.getElementById("grstat");if(!sw||!st)return;
   sw.setAttribute("aria-checked",gr.on?"true":"false");
+  {const dt=document.getElementById("grdot"),bd=document.getElementById("grbadge"),hp=document.getElementById("grhelp");
+   const stt=!gr.on?["","Off"]:!grS.ok?["wait",grS.tried?"Reader not found":"Looking..."]:["ok","Connected"];
+   if(dt)dt.className="grdot "+stt[0];if(bd)bd.textContent=stt[1];
+   if(hp&&gr.on&&grS.tried&&!grS.ok&&!hp.dataset.shown){hp.open=true;hp.dataset.shown="1"}}
   if(!gr.on)st.textContent="Off. Turn on while the reader program is running to update energy straight from the game.";
   else if(!grS.ok)st.textContent=grS.tried?"Reader not found. Start the reader program on this PC (game running, ExitLag off). Looking again every few seconds...":"Looking for the reader...";
   else st.textContent="Connected"+(grS.cur?" \u00B7 current character: "+grS.cur:"")+" \u00B7 "+grS.n+" character"+(grS.n===1?"":"s")+" seen"+(grS.last?" \u00B7 last update "+new Date(grS.last).toLocaleTimeString():"")+(grS.skipped?" \u00B7 "+grS.skipped+" not added (character limit)":"")+(chars.some(c=>c.auto&&!c.lk&&!c.gsid)&&!lkDefault()?" \u00B7 Pick a Region and Server under Add a Character to fill item level and combat power for game-added characters":"");
