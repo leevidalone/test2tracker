@@ -556,7 +556,7 @@ document.getElementById("list").onclick=ev=>{
       else if(k==="ascb")c.ascb=Math.min(30,v);
       else if(k==="il")c.il=Math.min(10000,v)}}
   else if(b.dataset.a==="tog"){c.col=!c.col}
-  else if(b.dataset.a==="auto"){c.auto=!c.auto;if(c.auto)c.gameAt=0;if(c.auto&&gr.on)setTimeout(grPoll,50)}
+  else if(b.dataset.a==="auto"){c.auto=!c.auto;if(c.auto){c.gameAt=0;c.gameAscAt=0}if(c.auto&&gr.on)setTimeout(grPoll,50)}
   else if(b.dataset.a==="espend"){
     const now=Date.now(),amt=parseInt(b.dataset.n,10),cur=calc(c,now).cur,eb=c.eb||0;
     if(cur+eb<amt)return;
@@ -760,16 +760,21 @@ async function grPoll(){
   const recs=j.characters||{},now=Date.now();let ch=false;grS.skipped=0;grS.n=0;grS.last=0;
   for(const name of Object.keys(recs)){
     const r=recs[name];if(!r||typeof name!=="string"||!name.trim())continue;
-    const ts=Math.round(Number(r.updated)*1000);if(!(ts>0))continue;
-    grS.n++;if(ts>grS.last)grS.last=ts;
+    const ts=Number(r.updated)>0?Math.round(Number(r.updated)*1000):0,ats=Number(r.ascUpdated)>0?Math.round(Number(r.ascUpdated)*1000):0;if(!(ts>0)&&!(ats>0))continue;
+    if(ts>0){grS.n++;if(ts>grS.last)grS.last=ts}
     let c=chars.find(x=>String(x.name).trim().toLowerCase()===name.trim().toLowerCase());
     if(!c){
+      if(!(ts>0))continue;
       if(chars.length>=MAXC){grS.skipped++;continue}
       c={id:now+Math.random(),name:name.trim().slice(0,30),base:0,at:ts,cap:840,amt:15,hrs:3,eb:0,nm:0,nmAt:now,nmb:0,asc:0,ascAt:now,ascb:0,il:0,run:(document.getElementById("runsel")||{}).value||"",cls:"",auto:true,gameAt:0,gsid:Number(r.serverId)||0};
       chars.push(c);ch=true}
-    if(c.auto&&ts>(c.gameAt||0)){
+    if(c.auto&&ts>0&&ts>(c.gameAt||0)){
       c.base=Math.max(0,Math.min(100000,Math.round(Number(r.energy)||0)));c.at=ts;
       c.eb=Math.max(0,Math.min(2000,Math.round(Number(r.charged)||0)));c.gameAt=ts;if(Number(r.serverId))c.gsid=Number(r.serverId);ch=true}
+    if(c.auto&&ats>0&&ats>(c.gameAscAt||0)){
+      if(r.asc!=null&&Number.isFinite(Number(r.asc))){c.asc=Math.max(0,Math.min(3,3-Math.round(Number(r.asc))));c.ascAt=ats}
+      if(r.ascExtra!=null&&Number.isFinite(Number(r.ascExtra)))c.ascb=Math.max(0,Math.min(30,Math.round(Number(r.ascExtra))));
+      c.gameAscAt=ats;ch=true}
   }
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
   grMark();grLookups();
