@@ -1245,10 +1245,16 @@ def gui_main(start_worker=True, theme=None):
         for name, d in chars:
             asc = "-" if d.get("asc") is None else "%d/3%s" % (d["asc"], " (+%d)" % d["ascExtra"] if d.get("ascExtra") else "")
             nm = "-" if d.get("nm") is None else "%d/14%s" % (d["nm"], " (+%d)" % d["nmExtra"] if d.get("nmExtra") else "")
-            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm, ago(d.get("updated"))))
+            data.append((name, name == cur, d.get("energy", "-"), d.get("charged", "-"), asc, nm))
+        stamps = [d.get("updated") for _, d in chars]
         if data == S["sig"]:
+            for lab, ts in zip(S.get("upd", []), stamps):      # only the "x s ago" texts change
+                t = ago(ts)
+                if lab.cget("text") != t:
+                    lab.config(text=t)
             return
         S["sig"] = data
+        S["upd"] = []
         lf = W["list"]
         for c in lf.winfo_children():
             c.destroy()
@@ -1263,15 +1269,18 @@ def gui_main(start_worker=True, theme=None):
             tk.Label(lf, text="No characters yet. Swap characters in game and they appear here.",
                      bg=P["card"], fg=P["mu"], font=(FONT, 10)).pack(pady=24)
             return
-        for name, is_cur, en, ch, asc, nm, up in data:
+        for (name, is_cur, en, ch, asc, nm), ts in zip(data, stamps):
             rb = RoundBox(lf, P["card"], P["row"], P["ac"] if is_cur else P["row"], radius=10, pad=8)
             rb.pack(fill="x", pady=3)
             fr = rb.inner
-            vals = [("\u25CF " if is_cur else "") + name, en, ch, asc, nm, up]
+            vals = [("\u25CF " if is_cur else "") + name, en, ch, asc, nm, ago(ts)]
             for k, (t, w, an, ex) in enumerate(cols):
-                tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else P["tx"],
-                         font=(FONT, 10, "bold" if k == 0 else "normal"), anchor=an).grid(row=0, column=k, sticky="ew")
+                lab = tk.Label(fr, text=str(vals[k]), bg=P["row"], fg=P["ac"] if (is_cur and k == 0) else P["tx"],
+                               font=(FONT, 10, "bold" if k == 0 else "normal"), anchor=an)
+                lab.grid(row=0, column=k, sticky="ew")
                 fr.grid_columnconfigure(k, weight=ex, minsize=w)
+                if k == 5:
+                    S["upd"].append(lab)
 
     def refresh():
         P = W["P"]
