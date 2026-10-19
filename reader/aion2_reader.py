@@ -659,6 +659,74 @@ def game_flows(proc):
     return out
 
 
+class FlowPicker:
+    """Finds the game stream by its content when it can't be matched to the game program
+    (ExitLag or another VPN/booster carries the game data under its own connection).
+    ExitLag can send the same data down several routes, so use one route at a time.
+    Recent data of every candidate flow is kept briefly so nothing is lost when one is chosen."""
+    KEEP = 768 * 1024
+    MAXKEYS = 24
+
+    def __init__(self):
+        self.score = {}
+        self.check = {}
+        self.hold = collections.OrderedDict()
+        self.active = None
+        self.last = 0.0
+        self.changed = False
+
+    def route(self, key, seq, payload, now):
+        """Return the (seq, payload) pieces to feed to the stream for this flow."""
+        self.changed = False
+        if self.active == key:
+            self.last = now
+            return [(seq, payload, now)]
+        if self.active is not None and now - self.last > 4:
+            self.active = None
+        h = self.hold.get(key)
+        if h is None:
+            if len(self.hold) >= self.MAXKEYS:
+                old, _ = self.hold.popitem(last=False)
+                self.score.pop(old, None)
+                self.check.pop(old, None)
+            h = self.hold[key] = [0, []]
+        else:
+            self.hold.move_to_end(key)
+        h[1].append((seq, payload, now))
+        h[0] += len(payload)
+        while h[0] > self.KEEP and len(h[1]) > 1:
+            h[0] -= len(h[1].pop(0)[1])
+        self.score[key] = sc = self.score.get(key, 0) + payload.count(TAG)
+        if self.active is None and sc < 2 and b"\xff\xff" in payload:
+            nxt = self.check.get(key, 4096)       # look for real compressed bundles now and then
+            if h[0] >= nxt and nxt <= 262144:
+                self.check[key] = nxt * 4
+                try:
+                    buf = b"".join(p[1] for p in sorted(h[1], key=lambda p: p[0]))
+                    sc += len(find_bundles(buf)[0])
+                except Exception:
+                    pass
+        if self.active is None and sc >= 2:
+            self.active = key
+            self.last = now
+            self.changed = True
+            out = h[1]
+            h[1] = []
+            h[0] = 0
+            return out
+        return []
+
+
+def local_ips():
+    import psutil
+    out = set()
+    for addrs in psutil.net_if_addrs().values():
+        for a in addrs:
+            if getattr(a, "family", None) is not None and a.family.name == "AF_INET":
+                out.add(a.address)
+    return out
+
+
 def cmd_live(a):
     from scapy.all import sniff, TCP, IP
     st = State()
@@ -666,28 +734,31 @@ def cmd_live(a):
     streams = {}
     flows = set()
     stop = threading.Event()
+    picker = FlowPicker()
+    mine = set()
 
     def refresh():
         while not stop.is_set():
             try:
                 flows.clear(); flows.update(game_flows(a.proc))
+                mine.update(local_ips())
             except Exception:
                 pass
             time.sleep(2)
     threading.Thread(target=refresh, daemon=True).start()
     time.sleep(2.5)
+    try:
+        mine.update(local_ips())
+    except Exception:
+        pass
     if not flows and getattr(a, "wait", False):
-        print("Waiting for %s (start the game and log in; ExitLag OFF)..." % a.proc)
-        w = 0
-        while not flows:
-            time.sleep(1)
-            w += 1
-            if w % 30 == 0:
-                print("  still waiting for %s..." % a.proc)
-    if not flows:
+        print("No direct game connection yet. Listening for the game (start it and log in).")
+        print("This also works through ExitLag or a VPN: the game data is found by its content.\n")
+    elif not flows:
         sys.exit("No game connection found for %s. Is the game running and logged in "
                  "(and ExitLag OFF)?" % a.proc)
-    print("Watching game connection(s):", sorted(flows))
+    if flows:
+        print("Watching game connection(s):", sorted(flows))
     print("Now swap characters / log in / spend energy. Ctrl+C to stop.\n")
 
     def on(pkt):
@@ -700,6 +771,24 @@ def cmd_live(a):
         except Exception:
             pass
         if not payload:
+            return
+        if not flows:
+            if (mine and ip.dst not in mine) or is_loop(ip.src) or t.sport in (443, 80, 53, 123):
+                return
+            key = (t.dport, ip.src, t.sport)
+            pieces = picker.route(key, t.seq, payload, time.time())
+            if not pieces:
+                return
+            if picker.changed:
+                print("[%s] game data found from %s:%d (via ExitLag/VPN or proxy)" % (
+                    time.strftime("%H:%M:%S"), ip.src, t.sport))
+            s = streams.get(key)
+            if s is None:
+                s = streams[key] = Stream(st.on_value, st.on_name, st.on_asc, st.on_nm)
+            for sq, pl, ts in pieces:
+                st.clock = ts          # replay buffered data with its original timing
+                s.feed(sq, pl)
+            st.clock = time.time()
             return
         for lp, rip, rp in flows:
             if ip.src == rip and t.sport == rp and t.dport == lp:
@@ -726,7 +815,20 @@ def cmd_live(a):
                   % (tot // 1024, bn, rs, len(streams)))
     threading.Thread(target=status, daemon=True).start()
     try:
-        sniff(filter="tcp", prn=on, store=False)
+        try:
+            from scapy.all import get_if_list
+            names = [n for n in get_if_list() if "Loopback" not in n]
+        except Exception:
+            names = None
+        try:
+            if names:
+                sniff(iface=names, filter="tcp", prn=on, store=False)
+            else:
+                sniff(filter="tcp", prn=on, store=False)
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            sniff(filter="tcp", prn=on, store=False)
     except KeyboardInterrupt:
         pass
     stop.set()
