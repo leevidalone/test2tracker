@@ -197,7 +197,7 @@ button:hover:not(:disabled){background:var(--hc)!important;color:#fff!important;
 <div class="top"><h1>Aion 2 Character Tracker</h1></div>
 <p class="sub">Track Odyle Energy, weekly entries, Odyle Morph and shop purchases, shared server crafts and run counts, and estimated Kina income for all your characters. Saved in your browser only. <span class="sech" style="display:block;margin:16px 0 8px">Timers</span><span class="reset" id="reset"></span></p>
 <h2 class="sech sep">Setup</h2>
-<div class="card" id="vis"><b>Show on page</b><div class="row" style="margin-top:8px;gap:16px"><label><input type="checkbox" data-v="add">Add a Character</label><label><input type="checkbox" data-v="srv">Odyle Energy</label><label><input type="checkbox" data-v="dd">Daily Dungeon</label><label><input type="checkbox" data-v="pc">Server Run Count</label></div><div class="memrow"><img id="memimg" alt="" height="34"><span><b>Membership</b><small>Turn on if you have the membership. Enables the Odyle Shop Purchases (Windbreeze Merchants).</small></span><button type="button" class="msw" id="memsw" role="switch" aria-checked="true" aria-label="Membership"><span class="k"></span></button></div><div class="memrow"><span><b>Game reader</b><small id="grstat">Off. Turn on while the reader program is running to update energy straight from the game.</small></span><button type="button" class="msw" id="grsw" role="switch" aria-checked="false" aria-label="Game reader"><span class="k"></span></button></div></div>
+<div class="card" id="vis"><div class="row" style="justify-content:flex-start;gap:8px"><button class="g tog" id="vistog" type="button" aria-label="Collapse or expand Show on page">▾</button><b>Show on page</b></div><div id="visbody"><div class="row" style="margin-top:8px;gap:16px"><label><input type="checkbox" data-v="add">Add a Character</label><label><input type="checkbox" data-v="srv">Odyle Energy</label><label><input type="checkbox" data-v="dd">Daily Dungeon</label><label><input type="checkbox" data-v="pc">Server Run Count</label></div><div class="memrow"><img id="memimg" alt="" height="34"><span><b>Membership</b><small>Turn on if you have the membership. Enables the Odyle Shop Purchases (Windbreeze Merchants).</small></span><button type="button" class="msw" id="memsw" role="switch" aria-checked="true" aria-label="Membership"><span class="k"></span></button></div><div class="memrow"><span><b>Game reader</b><small id="grstat">Off. Turn on while the reader program is running to update energy straight from the game.</small></span><button type="button" class="msw" id="grsw" role="switch" aria-checked="false" aria-label="Game reader"><span class="k"></span></button></div></div></div>
 
 <div class="card" id="addcard">
   <div class="row">
@@ -446,12 +446,15 @@ function parseDur(s){
 }
 let vis={add:1,srv:1,dd:1,pc:1};try{Object.assign(vis,JSON.parse(localStorage.getItem(KEY+"-vis")))}catch(e){}
 const MAXC=8;
+function grOn(){try{return !!gr.on}catch(e){return false}}
 function render(){
   const now=Date.now();
   document.getElementById("memsw").setAttribute("aria-checked",mem?"true":"false");
   {const ab=document.getElementById("add"),full=chars.length>=MAXC;ab.disabled=full;ab.textContent=full?"Character limit reached ("+MAXC+"/"+MAXC+")":"Add character ("+chars.length+"/"+MAXC+")"}
-  for(const [k,id] of [["add","addcard"],["srv","srv"],["dd","dd"],["pc","pc"]])document.getElementById(id).style.display=vis[k]?"":"none";
-  document.querySelector(".pair").style.display=document.getElementById("wkh").style.display=(vis.srv||vis.dd||vis.pc)?"":"none";
+  const pcOn=vis.pc&&!grOn();
+  for(const [k,id] of [["add","addcard"],["srv","srv"],["dd","dd"],["pc","pc"]])document.getElementById(id).style.display=(k==="pc"?pcOn:vis[k])?"":"none";
+  document.querySelector(".pair").style.display=document.getElementById("wkh").style.display=(vis.srv||vis.dd||pcOn)?"":"none";
+  document.querySelector('#vis input[data-v="pc"]').closest("label").style.display=grOn()?"none":"";
   document.querySelectorAll("#vis input").forEach(i=>{i.checked=!!vis[i.dataset.v]});
   document.getElementById("reset").innerHTML='<span class="rc"><small>Daily reset in</small><b>'+fmt(lastDaily(now)+86400000-now)+'</b></span><span class="rc"><small>Weekly reset in</small><b>'+fmt(nextReset()-now)+'</b></span><span class="rc" title="Starts every hour on the hour (community-confirmed schedule)"><small>Shugo Festival in</small><b style="color:var(--ac)">'+fmt((Math.floor(now/3600000)+1)*3600000-now)+'</b></span><span class="rc" title="Opens every 3 hours, at 02:00, 05:00, 08:00 ... UTC (community-observed, not an official schedule)"><small>Spacetime Rift in</small><b style="color:var(--ac)">'+fmt((Math.floor((now-7200000)/10800000)+1)*10800000+7200000-now)+'</b></span>';
   document.getElementById("srv").innerHTML='<h2 style="margin:0 0 4px;font-size:1.1rem;display:flex;align-items:center;justify-content:space-between;gap:8px">Odyle Energy (Shared)</h2>'+srvHtml(now);
@@ -781,7 +784,11 @@ async function grPoll(){
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
   grMark();grLookups();
 }
-document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grMark();if(gr.on)grPoll()};
+document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grMark();render();if(gr.on)grPoll()};
+let visClosed=false;try{visClosed=localStorage.getItem(KEY+"-viscol")==="1"}catch(e){}
+function visApply(){document.getElementById("visbody").style.display=visClosed?"none":"";document.getElementById("vistog").textContent=visClosed?"▸":"▾"}
+document.getElementById("vistog").onclick=()=>{visClosed=!visClosed;try{localStorage.setItem(KEY+"-viscol",visClosed?"1":"0")}catch(e){}visApply()};
+visApply();
 setInterval(grPoll,3000);
 load();chars.forEach(c=>{if(c.eb>2000)c.eb=2000;if(c.nmb>14)c.nmb=14;if(c.ascb>30)c.ascb=30});render();autoIL();grMark();grPoll();setInterval(()=>{if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()},30000);
 </script>
