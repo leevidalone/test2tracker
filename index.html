@@ -205,8 +205,8 @@ button:hover:not(:disabled){background:var(--hc)!important;color:#fff!important;
 <details class="grhelp" id="grhelp"><summary>How to set up the game reader</summary>
 <ol>
 <li>Install <b>Npcap</b> once (tick "WinPcap API-compatible mode" if asked). <a href="https://npcap.com/#download" target="_blank" rel="noopener">Get Npcap</a></li>
-<li>Download the reader program and run it <b>as administrator</b> on the PC you play on. Keep its window open. <span id="grdl"></span></li>
-<li>Turn <b>ExitLag</b> (or any game VPN or booster) off, then start Aion 2.</li>
+<li>Download the reader and open it on the PC you play on. Windows asks for administrator permission, so click Yes. If Windows shows "unknown publisher", click <b>More info</b> then <b>Run anyway</b>. Keep its window open. <span id="grdl"></span></li>
+<li>Start Aion 2. ExitLag or other game VPNs are fine. Nightmare tickets can occasionally be missing when one is on.</li>
 <li>Switch on <b>Game reader</b> above. The badge turns green when the reader is found.</li>
 <li>Log in or swap characters once. Each character appears here by itself, set to Auto.</li>
 </ol>
@@ -756,8 +756,8 @@ async function grLookups(){
 const GRKEY=KEY+"-gr",GRURL="http://127.0.0.1:17520/state";
 let gr={on:false};try{const x=JSON.parse(localStorage.getItem(GRKEY));if(x&&x.on)gr.on=true}catch(e){}
 const grS={ok:false,cur:"",n:0,last:0,skipped:0,tried:false};
-const READER_URL="https://github.com/leevidalone/test2tracker/tree/main/reader";
-(function(){const e=document.getElementById("grdl");if(e&&READER_URL)e.innerHTML=`<a class="grdlb" href="${READER_URL}" target="_blank" rel="noopener">Get the reader</a>`})();
+const READER_URL="https://github.com/leevidalone/test2tracker/releases/latest/download/aion2_reader.exe",READER_PAGE="https://github.com/leevidalone/test2tracker/releases/tag/reader-latest";
+(function(){const e=document.getElementById("grdl");if(e&&READER_URL)e.innerHTML=`<a class="grdlb" href="${READER_URL}" rel="noopener">Download for Windows</a> <a href="${READER_PAGE}" target="_blank" rel="noopener" style="font-size:.85rem">other downloads</a>`})();
 function grEnforce(){if(gr.on)return false;let ch=false;chars.forEach(c=>{if(c.auto){c.auto=false;ch=true}});if(ch)save();return ch}
 function grSave(){try{localStorage.setItem(GRKEY,JSON.stringify({on:gr.on}))}catch(e){}}
 function grMark(){
