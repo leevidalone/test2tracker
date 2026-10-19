@@ -345,9 +345,17 @@ class Stream:
         def outside(j):                             # plain message, not inside a compressed bundle
             return j < resume and not any(a <= j < e for a, e in spans)
 
+        hold = None
         for j, e, c, dump in scan_resources(b[start:]):
-            if outside(start + j):
-                ev.append((start + j, "val", (e, c, "plain", dump, None, None)))
+            P = start + j
+            if outside(P):
+                asc = None
+                if dump:                  # a plain (not compressed) dump: Ascension follows ~165 bytes later
+                    if len(b) - P < 400:
+                        hold = P if hold is None else min(hold, P)
+                        continue          # wait for the rest of the frame
+                    asc = scan_asc(b[:P + 400], P)
+                ev.append((P, "val", (e, c, "plain", dump, asc, None)))
         for j, nm, sid in scan_names(b[start:]):
             if outside(start + j):
                 ev.append((start + j, "name", (nm, sid)))
@@ -389,6 +397,8 @@ class Stream:
             if k not in self.seen:
                 self.seen.add(k)
                 self.bundles += 1
+        if hold is not None:
+            resume = min(resume, max(0, hold - 1))
         self.scanned = self.base + resume
         # keep memory bounded
         if len(self.buf) > 600000:
