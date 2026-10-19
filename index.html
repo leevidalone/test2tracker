@@ -291,9 +291,9 @@ function saveSrv(){try{localStorage.setItem(SKEY,JSON.stringify(srv))}catch(e){}
 function srvUsed(k,now){return lastWeekly(now)>srv[k+"at"]?0:srv[k+"u"]}
 const SRV=[["c","Server crafts",16]];
 function srvHtml(now){
-  return SRV.map(([k,l,m])=>{const left=m-srvUsed(k,now);
-    return `<div class="srow"><div><small>Resets in ${fmt(nextReset()-now)}</small><b>${left} / ${m} left</b></div><div class="sbtn"><button data-sk="${k}" data-d="1" ${left<m?"":"disabled"}>+1</button><button data-sk="${k}" data-d="-1" ${left>0?"":"disabled"}>-1</button></div></div>
-    <div class="ib"><input type="number" min="1" max="${m}" inputmode="numeric" placeholder="Amount morphed" id="srvn"><button class="del" data-sk="${k}" data-d="amt" ${left>0?"":"disabled"}>Morph</button><button class="del" data-sk="${k}" data-d="all" ${left>0?"":"disabled"}>Morph All</button></div>`}).join("");
+  return SRV.map(([k,l,m])=>{const used=srvUsed(k,now),left=m-used;
+    return `<div class="srow"><div><small>Resets in ${fmt(nextReset()-now)}</small><b>${used} / ${m} morphed</b></div><div class="sbtn"><button data-sk="${k}" data-d="1" ${used>0?"":"disabled"}>-1</button><button data-sk="${k}" data-d="-1" ${left>0?"":"disabled"}>+1</button></div></div>
+    <div class="ib"><input type="number" min="1" max="${m}" inputmode="numeric" placeholder="Amount morphed" id="srvn"><button class="del" data-sk="${k}" data-d="amt" ${left>0?"":"disabled"}>Add</button><button class="del" data-sk="${k}" data-d="all" ${left>0?"":"disabled"}>Morph All</button></div>`}).join("");
 }
 function crUsed(c,now){return lastWeekly(now)>(c.crAt??0)?0:(c.cr??0)}
 const CONTENT=[
