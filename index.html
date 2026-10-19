@@ -108,7 +108,7 @@ button[data-sk][data-d="-1"],button[data-sk][data-d="all"],button[data-dk][data-
 .mini{align-items:start}
 .mini .nxl{margin:2px 0 0;font-size:.74rem}.mini .eg{display:flex;align-items:center;gap:6px}
 .mini .mft{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px;padding-top:12px;border-top:1px solid var(--bd)}
-.mini .mft .trash{margin-left:auto}
+.mini .mft .acts{margin-left:auto}.acts{display:inline-flex;align-items:center;gap:8px}
 .mini .eg span{font-size:.78rem;color:var(--mu);width:98px;flex:none}
 @media (max-width:480px){.mini .eg{flex-wrap:wrap;gap:4px 6px}.mini .eg span{width:100%}}
 .mini .eg button{padding:3px 0;width:38px;font-size:.85rem;font-weight:600;border-radius:6px}
@@ -129,7 +129,7 @@ label{font-size:.85rem;color:var(--mu);display:flex;flex-direction:column;gap:2p
 .sec{border-top:1px solid var(--bd);margin-top:12px;padding-top:10px}
 .sec .row{justify-content:space-between}
 .sec .row+.row{justify-content:flex-start}
-.rfb{padding:2px 8px;margin-left:8px;font-size:1rem;line-height:1.2;vertical-align:middle}
+.rfb{padding:6px 10px;font-size:1rem;line-height:1.2;vertical-align:middle}
 .rfb.spin{opacity:.5;pointer-events:none}
 #addlk:empty{display:none}
 .lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 2px 10px}
@@ -282,7 +282,7 @@ function mini(c,r,now){
   const sp=(m,l)=>`<div class="eg"><span>${l}</span>${[40,80].map(x=>`<button data-a="espend" data-n="${x}" data-m="${m}" ${r.cur+(c.eb||0)>=x?"":"disabled"}>${x}</button>`).join("")}</div>`;
   const energy=`<div><small>Energy</small><b>${r.cur}/${ecap(c)}${bl(c.eb)}</b>${r.full===null?"":`<small class="nxl">Next +${c.amt} in <span class="nxt" data-t="${nextTick(now)}">${cd(nextTick(now)-now)}</span></small>`}</div>`;
   const trash=`<button class="del trash" data-a="del" title="Remove character" aria-label="Remove character"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>`;
-  return `<div class="mini">${energy}${cell("Nightmare",`${n.cur}/14${bl(c.nmb)}`,c.auto?"":`<button data-a="adj" data-k="nm" data-d="-1" ${n.cur+(c.nmb||0)>0?"":"disabled"}>-1</button>`)}${cell("Ascension",`${a.left}/3${bl(c.ascb)}`,c.auto?"":`<button data-a="adj" data-k="asc" data-d="-1" ${a.left+(c.ascb||0)>0?"":"disabled"}>-1</button>`)}${cell("Odyle Morph",`${crUsed(c,now)}/4`,`<button data-a="adj" data-k="cr" data-d="-1" ${crUsed(c,now)<4?"":"disabled"}>+1</button><button data-a="crall" ${crUsed(c,now)<4?"":"disabled"}>All</button>`)}${mem?cell("Shop Purchases <span class='info sm tl' tabindex='0' role='note' aria-label='Information'>i<span class='tip'>Membership is required to buy these. They are only sold by the Windbreeze Merchants.</span></span>",`${shUsed(c,now)}/20`,`<button data-a="adj" data-k="sh" data-d="-1" ${shUsed(c,now)<20?"":"disabled"}>+1</button><button data-a="shall" ${shUsed(c,now)<20?"":"disabled"}>All</button>`):""}<div class="kt"><div><small>Est. Kina <span class="info sm" tabindex="0" role="note" aria-label="Information">i<span class="tip">Estimate based on the highest possible run this character’s item level would allow, using current energy and charged energy only. Odyle Morph and shop purchases are not included. Energy that recharges later is not included.</span></span></small><b>${inf?`${(inf.total/1e6).toFixed(1)}M`:"&ndash;"}</b></div></div><div class="mft">${c.auto?"":sp("xc","Expedition")+sp("tc","Transcendence")}${trash}</div></div>`;
+  return `<div class="mini">${energy}${cell("Nightmare",`${n.cur}/14${bl(c.nmb)}`,c.auto?"":`<button data-a="adj" data-k="nm" data-d="-1" ${n.cur+(c.nmb||0)>0?"":"disabled"}>-1</button>`)}${cell("Ascension",`${a.left}/3${bl(c.ascb)}`,c.auto?"":`<button data-a="adj" data-k="asc" data-d="-1" ${a.left+(c.ascb||0)>0?"":"disabled"}>-1</button>`)}${cell("Odyle Morph",`${crUsed(c,now)}/4`,`<button data-a="adj" data-k="cr" data-d="-1" ${crUsed(c,now)<4?"":"disabled"}>+1</button><button data-a="crall" ${crUsed(c,now)<4?"":"disabled"}>All</button>`)}${mem?cell("Shop Purchases <span class='info sm tl' tabindex='0' role='note' aria-label='Information'>i<span class='tip'>Membership is required to buy these. They are only sold by the Windbreeze Merchants.</span></span>",`${shUsed(c,now)}/20`,`<button data-a="adj" data-k="sh" data-d="-1" ${shUsed(c,now)<20?"":"disabled"}>+1</button><button data-a="shall" ${shUsed(c,now)<20?"":"disabled"}>All</button>`):""}<div class="kt"><div><small>Est. Kina <span class="info sm" tabindex="0" role="note" aria-label="Information">i<span class="tip">Estimate based on the highest possible run this character’s item level would allow, using current energy and charged energy only. Odyle Morph and shop purchases are not included. Energy that recharges later is not included.</span></span></small><b>${inf?`${(inf.total/1e6).toFixed(1)}M`:"&ndash;"}</b></div></div><div class="mft">${c.auto?"":sp("xc","Expedition")+sp("tc","Transcendence")}<span class="acts">${rfHtml(c)}${trash}</span></div></div>`;
 }
 const SKEY=KEY+"-srv";
 let srv={cu:0,cat:0,su:0,sat:0,du:0,dat:0,db:0,xc:0,xcat:0,tc:0,tcat:0};
@@ -327,7 +327,7 @@ function incomeInfo(c,now){
 }
 const CPI='⚔️';
 function cpFmt(v){v=Math.round(v);return v>=1e6?(v/1e6).toFixed(2).replace(/\.?0+$/,"")+"M":v>=1e4?(v/1e3).toFixed(1).replace(/\.0$/,"")+"K":String(v)}
-function autoHtml(c){const on=!!c.auto,t=on?"Updating from the game"+(c.gameAt?" (last update "+new Date(c.gameAt).toLocaleTimeString()+")":"")+". Click to switch to manual.":"Manual. Click to update this card from the game (needs the reader running and the Game reader switch on).";return `<button class="g autob${on?" on":""}" data-a="auto" type="button" aria-pressed="${on}" title="${t}">${on?"\u26A1 Auto":"\u270E Manual"}</button>`}
+function autoHtml(c){const on=!!c.auto,t=on?"Updating from the game"+(c.gameAt?" (last update "+new Date(c.gameAt).toLocaleTimeString()+")":"")+". Click to switch to manual.":"Manual. Click to update this card from the game (needs the reader running and the Game reader switch on).",lock=!on&&!grOn();return `<button class="g autob${on?" on":""}" data-a="auto" type="button" aria-pressed="${on}" title="${lock?"Turn on the Game reader (in Show on page) to switch this card to Auto.":t}"${lock?" disabled":""}>${on?"\u26A1 Auto":"\u270E Manual"}</button>`}
 function rfHtml(c){return c.lk?`<button class="g rfb" data-a="refresh" type="button" title="Refresh item level and combat power from the game" aria-label="Refresh from game">↻</button>`:""}
 function cpHtml(c){return c.cp?`<span class="cpw" title="Combat power ${c.cp.toLocaleString("en-US")}">${CPI} ${cpFmt(c.cp)}</span>`:""}
 const RELAY="https://aion2-lookup.leedavi-98.workers.dev";
@@ -467,7 +467,7 @@ function render(){
   el.innerHTML=chars.map(c=>{
     const r=calc(c,now),pct=Math.min(100,r.cur/ecap(c)*100);
     return `<div class="card${c.col?" col":""}" data-id="${c.id}">
-      <div class="row"><button class="g tog" data-a="tog">${c.col?"▸":"▾"}</button><span class="name">${clsIcon(c.cls)}${esc(c.name)}${c.il?`<span style="font-weight:400;font-size:1.1rem;color:var(--mu)"> · iLv ${c.il.toLocaleString("en-US")}</span>`:""}${cpHtml(c)}${rfHtml(c)}${autoHtml(c)}</span>${c.col?`<span class="runs"><b>${Math.floor((r.cur+(c.eb||0))/80)}</b> or <b>${Math.floor((r.cur+(c.eb||0))/40)}</b> runs left<small style="display:block;text-align:right;font-size:.75rem">at 80 or 40 energy each</small></span>`:""}</div>
+      <div class="row"><button class="g tog" data-a="tog">${c.col?"▸":"▾"}</button><span class="name">${clsIcon(c.cls)}${esc(c.name)}${c.il?`<span style="font-weight:400;font-size:1.1rem;color:var(--mu)"> · iLv ${c.il.toLocaleString("en-US")}</span>`:""}${cpHtml(c)}${autoHtml(c)}</span>${c.col?`<span class="runs"><b>${Math.floor((r.cur+(c.eb||0))/80)}</b> or <b>${Math.floor((r.cur+(c.eb||0))/40)}</b> runs left<small style="display:block;text-align:right;font-size:.75rem">at 80 or 40 energy each</small></span>`:""}</div>
       ${c.col?mini(c,r,now):`
       <div class="big">${r.cur} <span class="mu">/ ${ecap(c)}</span>${c.eb?` <span class="bl">(+${c.eb})</span>`:""}</div>
       <div class="bar ${r.cur>=ecap(c)?"full":""}"><i style="width:${pct}%"></i></div>
@@ -484,7 +484,7 @@ function render(){
         </div>
         ${lookupUi(c)}
       </details>`}
-      <div class="trashrow"><button class="del trash" data-a="del" title="Remove character" aria-label="Remove character"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button></div>
+      <div class="trashrow"><span class="acts">${rfHtml(c)}<button class="del trash" data-a="del" title="Remove character" aria-label="Remove character"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button></span></div>
     </div>`}).join("");
 }
 let skipLk=false;
@@ -557,7 +557,7 @@ document.getElementById("list").onclick=ev=>{
       else if(k==="ascb")c.ascb=Math.min(30,v);
       else if(k==="il")c.il=Math.min(10000,v)}}
   else if(b.dataset.a==="tog"){c.col=!c.col}
-  else if(b.dataset.a==="auto"){c.auto=!c.auto;if(c.auto){c.gameAt=0;c.gameAscAt=0;c.gameNmAt=0}if(c.auto&&gr.on)setTimeout(grPoll,50)}
+  else if(b.dataset.a==="auto"){if(!c.auto&&!grOn())return;c.auto=!c.auto;if(c.auto){c.gameAt=0;c.gameAscAt=0;c.gameNmAt=0}if(c.auto&&gr.on)setTimeout(grPoll,50)}
   else if(b.dataset.a==="espend"){
     const now=Date.now(),amt=parseInt(b.dataset.n,10),cur=calc(c,now).cur,eb=c.eb||0;
     if(cur+eb<amt)return;
@@ -742,6 +742,7 @@ async function grLookups(){
 const GRKEY=KEY+"-gr",GRURL="http://127.0.0.1:17520/state";
 let gr={on:false};try{const x=JSON.parse(localStorage.getItem(GRKEY));if(x&&x.on)gr.on=true}catch(e){}
 const grS={ok:false,cur:"",n:0,last:0,skipped:0,tried:false};
+function grEnforce(){if(gr.on)return false;let ch=false;chars.forEach(c=>{if(c.auto){c.auto=false;ch=true}});if(ch)save();return ch}
 function grSave(){try{localStorage.setItem(GRKEY,JSON.stringify({on:gr.on}))}catch(e){}}
 function grMark(){
   const sw=document.getElementById("grsw"),st=document.getElementById("grstat");if(!sw||!st)return;
@@ -784,13 +785,13 @@ async function grPoll(){
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
   grMark();grLookups();
 }
-document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grMark();render();if(gr.on)grPoll()};
+document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grEnforce();grMark();render();if(gr.on)grPoll()};
 let visClosed=false;try{visClosed=localStorage.getItem(KEY+"-viscol")==="1"}catch(e){}
 function visApply(){document.getElementById("visbody").style.display=visClosed?"none":"";document.getElementById("vistog").textContent=visClosed?"▸":"▾"}
 document.getElementById("vistog").onclick=()=>{visClosed=!visClosed;try{localStorage.setItem(KEY+"-viscol",visClosed?"1":"0")}catch(e){}visApply()};
 visApply();
 setInterval(grPoll,3000);
-load();chars.forEach(c=>{if(c.eb>2000)c.eb=2000;if(c.nmb>14)c.nmb=14;if(c.ascb>30)c.ascb=30});render();autoIL();grMark();grPoll();setInterval(()=>{if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()},30000);
+load();chars.forEach(c=>{if(c.eb>2000)c.eb=2000;if(c.nmb>14)c.nmb=14;if(c.ascb>30)c.ascb=30});grEnforce();render();autoIL();grMark();grPoll();setInterval(()=>{if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()},30000);
 </script>
 </body>
 </html>
