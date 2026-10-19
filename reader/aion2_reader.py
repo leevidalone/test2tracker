@@ -732,6 +732,62 @@ def cmd_live(a):
     stop.set()
 
 
+def cmd_diag(a):
+    """Show where the game traffic goes (use with ExitLag / a VPN ON). Writes aion2_diag.txt"""
+    import collections as C, io
+    import psutil
+    from scapy.all import sniff, get_if_list, conf, TCP, UDP, IP, Raw
+    out = io.StringIO()
+
+    def p(*x):
+        line = " ".join(str(i) for i in x)
+        print(line)
+        out.write(line + "\n")
+    p("== game connections (psutil) for", a.proc)
+    pids = {x.pid for x in psutil.process_iter(["name"]) if (x.info["name"] or "").lower() == a.proc.lower()}
+    p("pids:", sorted(pids))
+    for c in psutil.net_connections(kind="inet"):
+        if c.pid in pids:
+            p("  ", "TCP" if c.type == 1 else "UDP", c.laddr, "->", c.raddr or "-", c.status)
+    p("\n== network adapters seen by scapy")
+    names = list(get_if_list())
+    for n in names:
+        try:
+            ip = conf.ifaces[n].ip
+        except Exception:
+            ip = "?"
+        p("  ", n, ip)
+    p("\n== sniffing ALL adapters for %d s (play: swap characters, spend energy)..." % a.secs)
+    stat = C.defaultdict(lambda: [0, 0, 0, 0])
+
+    def on(pkt):
+        if IP not in pkt:
+            return
+        ip = pkt[IP]
+        if TCP in pkt:
+            pr, sp, dp, pay = "TCP", pkt[TCP].sport, pkt[TCP].dport, bytes(pkt[TCP].payload)
+        elif UDP in pkt:
+            pr, sp, dp, pay = "UDP", pkt[UDP].sport, pkt[UDP].dport, bytes(pkt[UDP].payload)
+        else:
+            return
+        k = (getattr(pkt, "sniffed_on", "?"), pr, "%s:%d" % (ip.src, sp), "%s:%d" % (ip.dst, dp))
+        r = stat[k]
+        r[0] += 1
+        r[1] += len(pay)
+        r[2] += pay.count(b"\xff\xff")
+        r[3] += pay.count(TAG)
+    try:
+        sniff(iface=names, prn=on, store=False, timeout=a.secs)
+    except Exception as e:
+        p("sniff on all adapters failed (%s); trying default adapter" % e)
+        sniff(prn=on, store=False, timeout=a.secs)
+    p("\n== busiest flows: adapter, proto, from, to | packets, payload bytes, 'ff ff' marks, resource tag hits")
+    for k, r in sorted(stat.items(), key=lambda kv: -kv[1][1])[:25]:
+        p("  ", *k, "|", *r)
+    open("aion2_diag.txt", "w").write(out.getvalue())
+    p("\nSaved aion2_diag.txt next to the program. Send me that file.")
+
+
 def npcap_ok():
     if not sys.platform.startswith("win"):
         return True
@@ -786,6 +842,15 @@ def interactive():
 def main():
     if len(sys.argv) == 1:
         auto_live()
+        input("\nPress Enter to close")
+        return
+    if sys.argv[1:2] == ["diag"]:
+        ap = argparse.ArgumentParser(); ap.add_argument("diag"); ap.add_argument("--proc", default="Aion2.exe")
+        ap.add_argument("--secs", type=int, default=25)
+        try:
+            cmd_diag(ap.parse_args())
+        except Exception as e:
+            print("Error:", e)
         input("\nPress Enter to close")
         return
     if sys.argv[1:] == ["menu"]:
