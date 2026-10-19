@@ -139,7 +139,7 @@ label{font-size:.85rem;color:var(--mu);display:flex;flex-direction:column;gap:2p
 .lhead h2.sech{margin:0}
 .lbtns{display:flex;gap:8px;flex-wrap:wrap}
 .lbtns button{padding:6px 14px;font-size:.88rem}
-.autob{padding:3px 9px!important;font-size:.78rem!important;margin-left:8px;white-space:nowrap;vertical-align:middle;font-weight:600}.autob.on{color:#1a9d5c!important;border-color:#1a9d5c!important}
+.name.hd{flex:0 1 auto}.row>.autob{margin:0 auto}.row>.autob:last-child{margin:0 0 0 auto}.autob{padding:3px 9px!important;font-size:.78rem!important;margin-left:8px;white-space:nowrap;vertical-align:middle;font-weight:600}.autob.on{color:#1a9d5c!important;border-color:#1a9d5c!important}
 .memrow{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
 .memrow span{flex:1;min-width:0}.memrow span small{display:block;color:var(--mu);font-size:.8rem;margin-top:2px}
 .msw{position:relative;flex:none;width:46px;height:26px;padding:0!important;border-radius:999px!important;border:0!important;background:#6b7280!important}
@@ -467,7 +467,7 @@ function render(){
   el.innerHTML=chars.map(c=>{
     const r=calc(c,now),pct=Math.min(100,r.cur/ecap(c)*100);
     return `<div class="card${c.col?" col":""}" data-id="${c.id}">
-      <div class="row"><button class="g tog" data-a="tog">${c.col?"▸":"▾"}</button><span class="name">${clsIcon(c.cls)}${esc(c.name)}${c.il?`<span style="font-weight:400;font-size:1.1rem;color:var(--mu)"> · iLv ${c.il.toLocaleString("en-US")}</span>`:""}${cpHtml(c)}${autoHtml(c)}</span>${c.col?`<span class="runs"><b>${Math.floor((r.cur+(c.eb||0))/80)}</b> or <b>${Math.floor((r.cur+(c.eb||0))/40)}</b> runs left<small style="display:block;text-align:right;font-size:.75rem">at 80 or 40 energy each</small></span>`:""}</div>
+      <div class="row"><button class="g tog" data-a="tog">${c.col?"▸":"▾"}</button><span class="name hd">${clsIcon(c.cls)}${esc(c.name)}${c.il?`<span style="font-weight:400;font-size:1.1rem;color:var(--mu)"> · iLv ${c.il.toLocaleString("en-US")}</span>`:""}${cpHtml(c)}</span>${autoHtml(c)}${c.col?`<span class="runs"><b>${Math.floor((r.cur+(c.eb||0))/80)}</b> or <b>${Math.floor((r.cur+(c.eb||0))/40)}</b> runs left<small style="display:block;text-align:right;font-size:.75rem">at 80 or 40 energy each</small></span>`:""}</div>
       ${c.col?mini(c,r,now):`
       <div class="big">${r.cur} <span class="mu">/ ${ecap(c)}</span>${c.eb?` <span class="bl">(+${c.eb})</span>`:""}</div>
       <div class="bar ${r.cur>=ecap(c)?"full":""}"><i style="width:${pct}%"></i></div>
@@ -785,7 +785,7 @@ async function grPoll(){
   if(ch){save();if(!document.activeElement||!["INPUT","SELECT"].includes(document.activeElement.tagName))render()}
   grMark();grLookups();
 }
-document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();grEnforce();grMark();render();if(gr.on)grPoll()};
+document.getElementById("grsw").onclick=()=>{gr.on=!gr.on;grS.ok=false;grS.tried=false;grSave();if(gr.on){chars.forEach(c=>{c.auto=true;c.gameAt=0;c.gameAscAt=0;c.gameNmAt=0});save()}else grEnforce();grMark();render();if(gr.on)grPoll()};
 let visClosed=false;try{visClosed=localStorage.getItem(KEY+"-viscol")==="1"}catch(e){}
 function visApply(){document.getElementById("visbody").style.display=visClosed?"none":"";document.getElementById("vistog").textContent=visClosed?"▸":"▾"}
 document.getElementById("vistog").onclick=()=>{visClosed=!visClosed;try{localStorage.setItem(KEY+"-viscol",visClosed?"1":"0")}catch(e){}visApply()};
