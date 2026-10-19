@@ -676,6 +676,14 @@ def cmd_live(a):
             time.sleep(2)
     threading.Thread(target=refresh, daemon=True).start()
     time.sleep(2.5)
+    if not flows and getattr(a, "wait", False):
+        print("Waiting for %s (start the game and log in; ExitLag OFF)..." % a.proc)
+        w = 0
+        while not flows:
+            time.sleep(1)
+            w += 1
+            if w % 30 == 0:
+                print("  still waiting for %s..." % a.proc)
     if not flows:
         sys.exit("No game connection found for %s. Is the game running and logged in "
                  "(and ExitLag OFF)?" % a.proc)
@@ -724,6 +732,38 @@ def cmd_live(a):
     stop.set()
 
 
+def npcap_ok():
+    if not sys.platform.startswith("win"):
+        return True
+    import os
+    root = os.environ.get("SystemRoot", r"C:\Windows")
+    return any(os.path.exists(os.path.join(root, "System32", p))
+               for p in ("Npcap", "wpcap.dll")) or os.path.exists(os.path.join(root, "SysWOW64", "wpcap.dll"))
+
+
+def auto_live():
+    print("=" * 56)
+    print(" Aion 2 game reader - passive, does not change the game")
+    print("=" * 56)
+    print("Keep this window open while you play. Close it to stop.\n")
+    if not npcap_ok():
+        print("Npcap was not found on this PC. The reader needs it to see game traffic.")
+        print("Install it from https://npcap.com/#download (tick 'WinPcap API-compatible")
+        print("mode'), then start this program again.")
+        return
+    print("Step 1: turn on 'Game reader' on the tracker page.")
+    print("Step 2: log in to Aion 2 (ExitLag / game VPN OFF).")
+    print("Step 3: swap characters once; each one appears on the page.\n")
+    try:
+        cmd_live(argparse.Namespace(proc="Aion2.exe", wait=True))
+    except SystemExit as e:
+        print(e)
+    except Exception as e:
+        print("Error:", e)
+        print("If this mentions permissions or Npcap, right-click the program and choose "
+              "'Run as administrator'.")
+
+
 def interactive():
     print("Aion 2 energy reader - passive listener (does not change the game)\n")
     print("1) Live reader (game running, ExitLag OFF)")
@@ -745,6 +785,10 @@ def interactive():
 
 def main():
     if len(sys.argv) == 1:
+        auto_live()
+        input("\nPress Enter to close")
+        return
+    if sys.argv[1:] == ["menu"]:
         interactive()
         input("\nPress Enter to close")
         return
