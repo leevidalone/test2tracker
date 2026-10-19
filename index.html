@@ -766,7 +766,7 @@ async function grPoll(){
     if(!c){
       if(!(ts>0))continue;
       if(chars.length>=MAXC){grS.skipped++;continue}
-      c={id:now+Math.random(),name:name.trim().slice(0,30),base:0,at:ts,cap:840,amt:15,hrs:3,eb:0,nm:0,nmAt:now,nmb:0,asc:0,ascAt:now,ascb:0,il:0,run:(document.getElementById("runsel")||{}).value||"",cls:"",auto:true,gameAt:0,gsid:Number(r.serverId)||0};
+      c={id:now+Math.random(),name:name.trim().slice(0,30),base:0,at:ts,cap:840,amt:15,hrs:3,eb:0,nm:0,nmAt:now,nmb:0,asc:0,ascAt:now,ascb:0,il:0,run:(document.getElementById("runsel")||{}).value||"",cls:"",auto:true,col:true,gameAt:0,gsid:Number(r.serverId)||0};
       chars.push(c);ch=true}
     if(c.auto&&ts>0&&ts>(c.gameAt||0)){
       c.base=Math.max(0,Math.min(100000,Math.round(Number(r.energy)||0)));c.at=ts;
